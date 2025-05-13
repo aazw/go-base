@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: User API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/api/v1
+
+tags:
+  - name: Users
+    description: Operations related to user management
+
+paths:
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      description: Retrieves a list of users.
+      operationId: list_users
+      responses:
+        '200':
+          description: A list of users.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+              example:
+                users:
+                  - id: '123e4567-e89b-7acd-afe1-0123456789ab'
+                    name: 'John Doe'
+                    email: 'john.doe@example.com'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: 'Internal server error'
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Creates a new user.
+      operationId: create_user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPrototype'
+            example:
+              name: 'Jane Smith'
+              email: 'jane.smith@example.com'
+      responses:
+        '201':
+          description: Created user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                user:
+                  id: '123e4567-e89b-7acd-afe1-abcdefabcdef'
+                  name: 'Jane Smith'
+                  email: 'jane.smith@example.com'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 400
+                message: 'Invalid user data'
+
+  /users/{user_id}:
+    parameters:
+      - name: user_id
+        in: path
+        description: User ID (UUIDv7)
+        required: true
+        schema:
+          type: string
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+          minLength: 36
+          maxLength: 36
+    get:
+      tags:
+        - Users
+      summary: Get a user by ID
+      description: Retrieves a user by its ID.
+      operationId: get_user_by_id
+      responses:
+        '200':
+          description: A single user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                user:
+                  id: '123e4567-e89b-7acd-afe1-0123456789ab'
+                  name: 'John Doe'
+                  email: 'john.doe@example.com'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 404
+                message: 'User not found'
+    patch:
+      tags:
+        - Users
+      summary: Update a user by ID
+      description: Updates an existing user by its ID.
+      operationId: update_user_by_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPrototype'
+            example:
+              name: 'Johnathan Doe'
+              email: 'johnathan.doe@example.com'
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                user:
+                  id: '123e4567-e89b-7acd-afe1-0123456789ab'
+                  name: 'Johnathan Doe'
+                  email: 'johnathan.doe@example.com'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 400
+                message: 'Invalid user data'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 404
+                message: 'User not found'
+    delete:
+      tags:
+        - Users
+      summary: Delete a user by ID
+      description: Deletes a user by its ID.
+      operationId: delete_user_by_id
+      responses:
+        '204':
+          description: User deleted (no content)
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 404
+                message: 'User not found'
+
+components:
+  schemas:
+    User:
+      type: object
+      description: Representation of a user
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user (UUIDv7)
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+          minLength: 36
+          maxLength: 36
+          x-oapi-codegen-extra-tags:
+            binding: 'required,uuid'
+        name:
+          type: string
+          description: Full name of the user
+          pattern: '^.+$'
+          minLength: 1
+          maxLength: 100
+          x-oapi-codegen-extra-tags:
+            binding: 'required,min=1,max=100'
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+          pattern: '^[^@]+@[^@]+\.[^@]+$'
+          minLength: 5
+          maxLength: 254
+          x-oapi-codegen-extra-tags:
+            binding: 'required,email,min=5,max=254'
+      required:
+        - id
+        - name
+        - email
+
+    UserPrototype:
+      type: object
+      description: Prototype schema for user create or update
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+          pattern: '^.+$'
+          minLength: 1
+          maxLength: 100
+          x-oapi-codegen-extra-tags:
+            binding: 'required,min=1,max=100'
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+          pattern: '^[^@]+@[^@]+\.[^@]+$'
+          minLength: 5
+          maxLength: 254
+          x-oapi-codegen-extra-tags:
+            binding: 'required,email,min=5,max=254'
+      required:
+        - name
+        - email
+
+    UsersListResponse:
+      type: object
+      description: Users list response
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          minItems: 0
+          maxItems: 100
+      required:
+        - users
+
+    UserResponse:
+      type: object
+      description: Single user response
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - user
+
+    Error:
+      type: object
+      description: Error response
+      properties:
+        code:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 1000
+          description: Application-specific error code
+        message:
+          type: string
+          description: Error message
+      required:
+        - code
+        - message

@@ -1,0 +1,27 @@
+# /etc/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          app: 'prometheus'
+  # Gin server (port: 8080, metrics_path: /metrics/prometheus)
+  - job_name: 'goapp-local'
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          app: 'goapp'
+          mode: 'local'
+  - job_name: 'goapp-container'
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ['goapp:8080']
+        labels:
+          app: 'goapp'
+          mode: 'container'
+remote_write:
+  - url: 'http://mimir:9009/api/v1/push'

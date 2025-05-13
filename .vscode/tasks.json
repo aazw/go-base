@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Delete all .DS_Store",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/remove_ds_store.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "Go mod tidy",
+      "type": "shell",
+      "command": "go mod tidy",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "Go generate",
+      "type": "shell",
+      "command": "go generate ./...",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "Sqlc generate",
+      "type": "shell",
+      "command": "sqlc generate",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "Go linter",
+      "type": "shell",
+      "command": "golangci-lint run",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    }
+  ]
+}

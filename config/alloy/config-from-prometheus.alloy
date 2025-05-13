@@ -1,0 +1,43 @@
+prometheus.scrape "prometheus" {
+	targets = [{
+		__address__ = "localhost:9090",
+		app         = "prometheus",
+	}]
+	forward_to      = [prometheus.remote_write.default.receiver]
+	job_name        = "prometheus"
+	scrape_interval = "15s"
+}
+
+prometheus.scrape "goapp_local" {
+	targets = [{
+		__address__ = "host.docker.internal:8080",
+		app         = "goapp",
+		mode        = "local",
+	}]
+	forward_to      = [prometheus.remote_write.default.receiver]
+	job_name        = "goapp-local"
+	scrape_interval = "15s"
+	metrics_path    = "/metrics/prometheus"
+}
+
+prometheus.scrape "goapp_container" {
+	targets = [{
+		__address__ = "goapp:8080",
+		app         = "goapp",
+		mode        = "container",
+	}]
+	forward_to      = [prometheus.remote_write.default.receiver]
+	job_name        = "goapp-container"
+	scrape_interval = "15s"
+	metrics_path    = "/metrics/prometheus"
+}
+
+prometheus.remote_write "default" {
+	endpoint {
+		url = "http://mimir:9009/api/v1/push"
+
+		queue_config { }
+
+		metadata_config { }
+	}
+}

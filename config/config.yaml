@@ -1,0 +1,9 @@
+postgres:
+  host: postgres
+  user: postgres
+  password: hogehoge
+  database: test_db
+  sslmode: disable
+valkey:
+  host: valkey
+  port: 6379

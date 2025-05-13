@@ -1,0 +1,40 @@
+{
+  "name": "vsc-go-base",
+  "dockerComposeFile": [
+    "../compose.yaml", //
+    "./compose.yaml" //
+  ],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "runServices": [
+    "postgres", //
+    "valkey", //
+    "grafana", //
+    "mimir", //
+    // "prometheus", //
+    "alloy", //
+    "tempo", //
+    "pyroscope", //
+    "loki", //
+    "promtail" //
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "emeraldwalk.RunOnSave",
+        "ms-azuretools.vscode-containers",
+        "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode",
+        "golang.go"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "remoteUser": "root",
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  "shutdownAction": "stopCompose"
+}

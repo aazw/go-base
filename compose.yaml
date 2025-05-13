@@ -1,0 +1,198 @@
+name: goapp # docker networkの名前を固定するために、compose project nameを指定する
+services:
+  # ##################################################################
+  # Main App
+  # ##################################################################
+
+  goapp:
+    build:
+      context: .
+    ports:
+      - '8080:8080'
+
+  goapp-migrate:
+    image: migrate/migrate:v4.18.3
+    command:
+      - -database
+      - 'postgresql://postgres:hogehoge@postgres:5432/test_db?sslmode=disable'
+      - -path
+      - /goapp/db/migrations
+      - up
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/db/migrations:/goapp/db/migrations
+    profiles:
+      - migrate-only
+
+  # https://hub.docker.com/_/postgres
+  # https://github.com/postgres/postgres
+  postgres:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: hogehoge
+      POSTGRES_DB: test_db
+
+  # https://hub.docker.com/r/sosedoff/pgweb
+  # https://github.com/sosedoff/pgweb
+  pgweb:
+    image: sosedoff/pgweb:0.16.2
+    ports:
+      - 8081:8081
+    environment:
+      DATABASE_URL: 'postgresql://postgres:hogehoge@postgres:5432/test_db?sslmode=disable'
+    depends_on:
+      - postgres
+
+  # https://github.com/valkey-io/valkey
+  # https://hub.docker.com/r/valkey/valkey
+  valkey:
+    image: valkey/valkey
+    ports:
+      - 6379:6379
+
+  # ##################################################################
+  # Dashboard
+  # ##################################################################
+
+  # https://hub.docker.com/r/grafana/grafana
+  # https://github.com/grafana/grafana
+  grafana:
+    image: grafana/grafana:12.0.0
+    ports:
+      - '3000:3000'
+    environment:
+      # 匿名アクセスを有効化
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      # 匿名ユーザーが所属する組織名（デフォルトは "Main Org."）
+      GF_AUTH_ANONYMOUS_ORG_NAME: 'Main Org.'
+      # 匿名ユーザーに付与するロール（Admin, Editor, Viewer のいずれか）
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      # ログインフォームを非表示にする
+      GF_AUTH_DISABLE_LOGIN_FORM: true
+      # Basic 認証を無効化
+      GF_AUTH_BASIC_ENABLED: false
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+
+  # ##################################################################
+  # Metrics
+  # ##################################################################
+
+  # https://hub.docker.com/r/grafana/mimir
+  # https://github.com/grafana/mimir
+  mimir:
+    image: grafana/mimir:2.16.0
+    ports:
+      - '9009:9009'
+    command:
+      - -target=all
+      - -server.http-listen-address=0.0.0.0
+      - -server.grpc-listen-address=0.0.0.0
+      - --config.file=/etc/mimir/mimir.yaml
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/mimir/mimir.yaml:/etc/mimir/mimir.yaml
+
+  # https://hub.docker.com/r/prom/prometheus
+  # https://github.com/prometheus/prometheus
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    ports:
+      - '9090:9090'
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # https://hub.docker.com/r/grafana/alloy
+  # https://github.com/grafana/alloy
+  alloy:
+    image: grafana/alloy:v1.8.3
+    ports:
+      - '12345:12345'
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      # - /etc/alloy/config.alloy
+      - /etc/alloy/config-from-prometheus.alloy
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/alloy:/etc/alloy
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # このサービスは "run-only" プロファイル有効時(明示的に--profile run-only upしたとき)のみ、up で起動対象に含まれる
+  # 通常のdocker compose upでは無視される → 事実上、docker compose run alloy-convert専用のserviceにできる
+  # ターゲットサービスを明示的に指定した場合、該当サービスの profiles を自動で有効化して実行するため上記runで実行できる
+  alloy-convert:
+    image: grafana/alloy:v1.8.3
+    command:
+      - convert
+      - --source-format=prometheus
+      - --output=/alloy/alloy/config-from-prometheus.alloy
+      - /alloy/prometheus/prometheus.yaml
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/prometheus:/alloy/prometheus
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/alloy:/alloy/alloy
+    profiles:
+      - run-only
+
+  # ##################################################################
+  # Tracing
+  # ##################################################################
+
+  # https://hub.docker.com/r/grafana/tempo
+  # https://github.com/grafana/tempo
+  tempo:
+    image: grafana/tempo:2.7.2
+    ports:
+      - '3200:3200' # tempo http
+      - '4317:4317' # otlp grpc
+      - '4318:4318' # otlp http
+      - '9095:9095' # tempo grpc
+    command:
+      - -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/tempo:/etc/tempo
+
+  # ##################################################################
+  # Profiling
+  # ##################################################################
+
+  # https://hub.docker.com/r/grafana/pyroscope
+  # https://github.com/grafana/pyroscope
+  pyroscope:
+    image: grafana/pyroscope:1.13.2
+    ports:
+      - '4040:4040'
+
+  # ##################################################################
+  # Log
+  # ##################################################################
+
+  # https://hub.docker.com/r/grafana/loki
+  # https://github.com/grafana/loki
+  loki:
+    image: grafana/loki:3.5.0
+    ports:
+      - '3100:3100'
+      - '9096:9096'
+    command:
+      - -config.file=/etc/loki/loki-local-config.yaml
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/loki:/etc/loki
+
+  # https://hub.docker.com/r/grafana/promtail
+  # https://github.com/grafana/loki
+  promtail:
+    image: grafana/promtail:3.5.0
+    ports:
+      - '9080:9080'
+    command:
+      - -config.file=/etc/loki/promtail-docker-config.yaml
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/loki:/etc/loki
+      - /var/log:/var/log
+      - /var/run/docker.sock:/var/run/docker.sock:ro

@@ -1,0 +1,15 @@
+services:
+  devcontainer:
+    container_name: vsc-go-base
+    build:
+      context: ./.devcontainer
+    working_dir: /workspace
+    tty: true
+    volumes:
+      - .:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  # override: disable main app on development
+  goapp: null
