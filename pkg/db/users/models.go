@@ -4,8 +4,16 @@
 
 package users
 
+import (
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
 type User struct {
-	ID    int64
-	Name  string
-	Email string
+	ID        uuid.UUID
+	Name      string
+	Email     string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
 }

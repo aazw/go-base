@@ -1,5 +1,6 @@
 postgres:
   host: postgres
+  port: 5432
   user: postgres
   password: hogehoge
   database: test_db
@@ -7,3 +8,9 @@ postgres:
 valkey:
   host: valkey
   port: 6379
+tempo:
+  host: tempo
+  port: 4318
+pyroscope:
+  host: pyroscope
+  port: 4040

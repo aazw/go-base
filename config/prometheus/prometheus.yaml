@@ -8,16 +8,16 @@ scrape_configs:
       - targets: ['localhost:9090']
         labels:
           app: 'prometheus'
-  # Gin server (port: 8080, metrics_path: /metrics/prometheus)
+  # Gin server (port: 8080, metrics_path: /metrics)
   - job_name: 'goapp-local'
-    metrics_path: /metrics/prometheus
+    metrics_path: /metrics
     static_configs:
       - targets: ['host.docker.internal:8080']
         labels:
           app: 'goapp'
           mode: 'local'
   - job_name: 'goapp-container'
-    metrics_path: /metrics/prometheus
+    metrics_path: /metrics
     static_configs:
       - targets: ['goapp:8080']
         labels:

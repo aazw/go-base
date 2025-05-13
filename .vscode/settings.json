@@ -2,9 +2,9 @@
   "files.associations": {
     ".prettierrc": "jsonc"
   },
+  "prettier.requireConfig": true,
   "editor.wordWrap": "off",
   "diffEditor.wordWrap": "off",
-  "prettier.requireConfig": true,
   "[markdown]": {
     "editor.wordWrap": "off"
   },
@@ -27,8 +27,19 @@
   "emeraldwalk.runonsave": {
     "commands": [
       {
+        // Dcokerfileのフォーマット
         "match": "\\bDockerfile$",
         "cmd": "dockerfmt -w \"${file}\""
+      },
+      {
+        // シェルスクリプトのフォーマット
+        "match": "\\.sh$",
+        "cmd": "shfmt -w \"${file}\""
+      },
+      {
+        // openapi/specs/ に定義されている各ドメインのSpecが更新されたら統合版を更新する
+        "match": "openapi/specs/.*\\.(?:yaml|yml)$",
+        "cmd": "bash -lc 'redocly join openapi/base.yaml openapi/specs/*.yaml -o .openapi/openapi.yaml'"
       }
     ]
   }

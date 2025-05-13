@@ -10,7 +10,7 @@ services:
     ports:
       - '8080:8080'
 
-  goapp-migrate:
+  goapp-migrate-up:
     image: migrate/migrate:v4.18.3
     command:
       - -database
@@ -18,6 +18,19 @@ services:
       - -path
       - /goapp/db/migrations
       - up
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-.}/db/migrations:/goapp/db/migrations
+    profiles:
+      - migrate-only
+
+  goapp-migrate-down:
+    image: migrate/migrate:v4.18.3
+    command:
+      - -database
+      - 'postgresql://postgres:hogehoge@postgres:5432/test_db?sslmode=disable'
+      - -path
+      - /goapp/db/migrations
+      - down
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-.}/db/migrations:/goapp/db/migrations
     profiles:

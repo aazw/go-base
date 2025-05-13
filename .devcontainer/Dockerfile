@@ -9,6 +9,7 @@ ARG GOLANG_MIGRATE_VERSION=v4.18.3
 ARG OAPI_CODEGEN_VERSION=v2.4.1
 ARG OGEN_VERSION=latest
 ARG DIVE_VERSION=v0.13.1
+ARG SHFMT_VERSION=latest
 
 # ##############################
 # builder images
@@ -67,6 +68,7 @@ RUN apt-get -y install \
     git
 
 # golang
+# refs above
 COPY --from=golang-builder /usr/local/go /usr/local/
 ENV PATH=$PATH:/usr/local/go/bin/:/root/go/bin/
 
@@ -86,16 +88,19 @@ ARG DOCKERFMT_VERSION
 RUN go install github.com/reteps/dockerfmt@${DOCKERFMT_VERSION}
 
 # jq
-# https://github.com/jqlang/jq
+# refs above
 COPY --from=jq-builder /jq /usr/local/bin/
 
 # golangci-lint
+# refs above
 COPY --from=golangci-lint-builder /usr/bin/golangci-lint /usr/local/bin/
 
 # sqlc
+# refs above
 COPY --from=sqlc-builder /workspace/sqlc /usr/local/bin/
 
 # golang-migrate
+# refs above
 COPY --from=golang-migrate-builder /usr/local/bin/migrate /usr/local/bin/
 
 # openapi-generator-cli
@@ -122,4 +127,14 @@ RUN yarn global add ibm-openapi-validator
 RUN yarn global add @redocly/cli
 
 # dive
+# refs above
 COPY --from=dive-builder /usr/local/bin/dive /usr/local/bin/
+
+# shfmt
+# https://github.com/mvdan/sh
+ARG SHFMT_VERSION
+RUN go install mvdan.cc/sh/v3/cmd/shfmt@${SHFMT_VERSION}
+
+# sql-formatter
+# https://github.com/sql-formatter-org/sql-formatter
+RUN yarn global add sql-formatter

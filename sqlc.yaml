@@ -3,7 +3,7 @@ sql:
   - name: 'users'
     engine: 'postgresql'
     schema:
-      - 'db/migrations/000001_create_users_table.up.sql'
+      - 'db/migrations/000002_create_users_table.up.sql'
     queries:
       - 'db/queries/users/*.sql'
     gen:
@@ -11,3 +11,9 @@ sql:
         out: 'pkg/db/users'
         package: 'users'
         sql_package: 'pgx/v5'
+        # https://docs.sqlc.dev/en/stable/howto/overrides.html
+        overrides:
+          - db_type: 'uuid'
+            go_type:
+              import: 'github.com/google/uuid'
+              type: 'UUID'

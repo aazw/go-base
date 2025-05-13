@@ -1,22 +1,25 @@
 {
   "name": "vsc-go-base",
   "dockerComposeFile": [
-    "../compose.yaml", //
-    "./compose.yaml" //
+    // ここに改行入れておけばPrettierによって配列が1行にならない
+    "../compose.yaml",
+    "./compose.yaml"
   ],
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "runServices": [
-    "postgres", //
-    "valkey", //
-    "grafana", //
-    "mimir", //
-    // "prometheus", //
-    "alloy", //
-    "tempo", //
-    "pyroscope", //
-    "loki", //
-    "promtail" //
+    // ここに改行入れておけばPrettierによって配列が1行にならない
+    "postgres",
+    "pgweb",
+    "valkey",
+    "grafana",
+    "mimir",
+    "prometheus",
+    "alloy",
+    "tempo",
+    "pyroscope",
+    "loki",
+    "promtail"
   ],
   "customizations": {
     "vscode": {

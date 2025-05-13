@@ -19,9 +19,6 @@ import (
 	"syscall"
 	"time"
 
-	// HTTP Server
-	"github.com/gin-gonic/gin"
-
 	// Validator
 	"github.com/go-playground/validator/v10"
 
@@ -32,11 +29,6 @@ import (
 
 	// DB (PostgreSQL)
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	// Session Manager (Valkey)
-	"github.com/alexedwards/scs/redisstore"
-	"github.com/alexedwards/scs/v2"
-	"github.com/gomodule/redigo/redis"
 
 	// Profiling
 	"github.com/grafana/pyroscope-go"
@@ -54,7 +46,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
+	// Session Manager (Valkey)
+	"github.com/alexedwards/scs/redisstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/gomodule/redigo/redis"
+
+	// HTTP Server
+	"github.com/gin-gonic/gin"
+
 	//
+	"goapp/pkg/api"
+	"goapp/pkg/api/openapi"
 	"goapp/pkg/config"
 )
 
@@ -97,6 +99,8 @@ func Execute() error {
 }
 
 func init() {
+	gin.SetMode(gin.ReleaseMode)
+
 	f := rootCmd.PersistentFlags()
 
 	// CLI専用フラグ
@@ -226,11 +230,25 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 	defer dbPool.Close()
 
-	// Session Manager (Valkey)
-	sessionManager, err := initSessionManager()
+	// Valkey/Redis
+	redisPool, err := initValkey()
 	if err != nil {
-		return fmt.Errorf("session manager init error: %w", err)
+		return fmt.Errorf("valkey init error: %w", err)
 	}
+	defer redisPool.Close()
+
+	// Metrics
+	err = initMetrics()
+	if err != nil {
+		return fmt.Errorf("metrics init error: %w", err)
+	}
+
+	// Tracing
+	shutdown, err := initTracing()
+	if err != nil {
+		return fmt.Errorf("metrics init error: %w", err)
+	}
+	defer shutdown()
 
 	// Profiling (Pyroscope)
 	err = initProfiling()
@@ -238,30 +256,34 @@ func runE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("profiler init error: %w", err)
 	}
 
+	// Session Manager (Valkey)
+	sessionManager, err := initSessionManager(redisPool)
+	if err != nil {
+		return fmt.Errorf("session manager init error: %w", err)
+	}
+
 	// Gin
-	router, err := setupRouter()
+	router, err := setupRouter(sessionManager)
 	if err != nil {
 		return fmt.Errorf("router init error: %w", err)
 	}
 
-	// add routes
-	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
+	// Add openapi handler
+	serverImpl := api.NewStrictServerImpl(dbPool, redisPool, sessionManager)
+	handler := openapi.NewStrictHandler(serverImpl, nil)
+	openapi.RegisterHandlers(router, handler)
 
 	// Run with Graceful Shutdown
 	hostport := net.JoinHostPort(cfg.Host, strconv.Itoa(int(cfg.Port)))
 	srv := &http.Server{
 		Addr:    hostport,
-		Handler: sessionManager.LoadAndSave(router),
+		Handler: router,
 	}
 
 	errCh := make(chan error, 1)
 	defer close(errCh)
 	go func() {
-		fmt.Printf("server listening on %s\n", "0.0.0.0:8080")
+		fmt.Printf("server listening on %s\n", hostport)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- fmt.Errorf("listen error: %w", err)
 		} else {
@@ -296,6 +318,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 }
 
+// PostgreSQL
 func initDB(ctx context.Context) (*pgxpool.Pool, error) {
 
 	dsn := &url.URL{
@@ -325,7 +348,9 @@ func initDB(ctx context.Context) (*pgxpool.Pool, error) {
 	return dbPool, nil
 }
 
-func initSessionManager() (*scs.SessionManager, error) {
+// Valkey/Redis
+func initValkey() (*redis.Pool, error) {
+
 	pool := &redis.Pool{
 		MaxIdle:     10,
 		MaxActive:   100,
@@ -350,20 +375,37 @@ func initSessionManager() (*scs.SessionManager, error) {
 	}
 	conn.Close()
 
-	// session manager
-	sessionManager := scs.New()
-	sessionManager.Store = redisstore.New(pool)
-
-	return sessionManager, nil
+	return pool, nil
 }
 
+// Prometheus
+var httpRequests *prometheus.HistogramVec
+
+// PrometheusによるPull用エンドポイントのための準備
+func initMetrics() error {
+	httpRequests = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: appName,
+			Subsystem: "http_server",
+			Name:      "request_duration_seconds",
+			Help:      "HTTP リクエストの処理に要した時間（秒）",
+			Buckets:   prometheus.DefBuckets,
+		},
+		[]string{"path", "method", "status"},
+	)
+	prometheus.MustRegister(httpRequests)
+
+	return nil
+}
+
+// Grafana Tempo
 func initTracing() (func() error, error) {
 	// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp#example-package
 
-	// // 内部ロガーをlog/slogに差し替え
-	// otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-	// 	sharedLogger.Error("opentelemetry export error", "error", err)
-	// }))
+	// 内部ロガーをlog/slogに差し替え
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		logger.Error("opentelemetry export error", "error", err)
+	}))
 
 	hostport := net.JoinHostPort(cfg.Tempo.Host, strconv.Itoa(int(cfg.Tempo.Port)))
 
@@ -401,6 +443,7 @@ func initTracing() (func() error, error) {
 	}, nil
 }
 
+// Grafana Pyroscope
 func initProfiling() error {
 	uri := &url.URL{
 		Scheme: "http",
@@ -445,29 +488,17 @@ func initProfiling() error {
 	return nil
 }
 
-// Prometheus
-var httpRequests *prometheus.HistogramVec
+// Session manager
+func initSessionManager(pool *redis.Pool) (*scs.SessionManager, error) {
 
-// PrometheusによるPull用エンドポイントのための準備
-func initMetrics() error {
-	httpRequests = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace: appName,
-			Subsystem: "http_server",
-			Name:      "request_duration_seconds",
-			Help:      "HTTP リクエストの処理に要した時間（秒）",
-			Buckets:   prometheus.DefBuckets,
-		},
-		[]string{"path", "method", "status"},
-	)
-	prometheus.MustRegister(httpRequests)
+	sessionManager := scs.New()
+	sessionManager.Store = redisstore.New(pool)
 
-	return nil
+	return sessionManager, nil
 }
 
-func setupRouter() (*gin.Engine, error) {
-	// Gin
-	gin.SetMode(gin.ReleaseMode)
+// Gin
+func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 
 	// https://github.com/gin-gonic/gin/blob/v1.10.0/gin.go#L224C2-L224C34
 	// gin.Default()内では、engine.Use(Logger(), Recovery()) を読んでいる. gin.Logger()が先.
@@ -525,8 +556,111 @@ func setupRouter() (*gin.Engine, error) {
 		httpRequests.WithLabelValues(c.FullPath(), c.Request.Method, status).Observe(duration)
 	})
 
+	// Session Load
+	// designed by https://github.com/alexedwards/scs/blob/v2.8.0/session.go#L132
+	router.Use(SessionLoadAndSave(sessionManager))
+
 	// Metrics Endpoint: (Prometheus)
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	return router, nil
+}
+
+type sessionWriter struct {
+	gin.ResponseWriter
+	ctx       context.Context
+	req       *http.Request
+	sm        *scs.SessionManager
+	committed bool
+}
+
+func (sw *sessionWriter) commitAndSetCookie() error {
+	token, expiry, err := sw.sm.Commit(sw.ctx)
+	if err != nil {
+		return err
+	}
+	http.SetCookie(sw.ResponseWriter, &http.Cookie{
+		Name:     sw.sm.Cookie.Name,
+		Value:    token,
+		Path:     sw.sm.Cookie.Path,
+		Domain:   sw.sm.Cookie.Domain,
+		Secure:   sw.sm.Cookie.Secure,
+		HttpOnly: sw.sm.Cookie.HttpOnly,
+		SameSite: sw.sm.Cookie.SameSite,
+		Expires:  expiry,
+	})
+	return nil
+}
+
+func (sw *sessionWriter) ensureCommit() {
+	if sw.committed {
+		return
+	}
+	if err := sw.commitAndSetCookie(); err != nil {
+		// ヘッダ未確定なら 500 を返す
+		sw.sm.ErrorFunc(sw.ResponseWriter, sw.req, err)
+	}
+	sw.committed = true
+}
+
+func (sw *sessionWriter) WriteHeader(code int) {
+	sw.ensureCommit()
+	sw.ResponseWriter.WriteHeader(code)
+}
+
+func (sw *sessionWriter) Write(data []byte) (int, error) {
+	sw.ensureCommit()
+	return sw.ResponseWriter.Write(data)
+}
+
+func (sw *sessionWriter) WriteString(s string) (int, error) {
+	sw.ensureCommit()
+	return sw.ResponseWriter.WriteString(s)
+}
+
+func SessionLoadAndSave(sm *scs.SessionManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// セッション対象外の処理
+		switch c.Request.URL.Path {
+		case "/metrics":
+			c.Next()
+			return
+		default:
+		}
+
+		w := c.Writer
+		r := c.Request
+		w.Header().Add("Vary", "Cookie")
+
+		// セッションを読込
+		var token string
+		if cookie, err := r.Cookie(sm.Cookie.Name); err == nil {
+			token = cookie.Value
+		}
+		ctx, err := sm.Load(r.Context(), token)
+		if err != nil {
+			sm.ErrorFunc(w, r, err)
+			c.Abort()
+			return
+		}
+		c.Request = r.WithContext(ctx)
+
+		// ResponseWriter を sessionWriter に差し替え
+		cw := &sessionWriter{
+			ResponseWriter: w,
+			ctx:            ctx,
+			req:            r,
+			sm:             sm,
+		}
+		c.Writer = cw
+
+		// ハンドラチェーン続行
+		c.Next()
+
+		// ここまで来ても何も書かれていない場合の処理 (204 等)
+		if !cw.committed && !cw.Written() {
+			cw.ensureCommit()
+		}
+	}
 }

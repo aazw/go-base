@@ -1,15 +1,54 @@
 openapi: 3.0.3
 info:
-  title: User API
+  title: GoApp API
   version: 1.0.0
-servers:
-  - url: https://api.example.com/api/v1
-
+  description: ''
 tags:
+  - name: Health
+    description: ヘルスチェック関連のエンドポイント
+    x-displayName: Health
   - name: Users
     description: Operations related to user management
-
+    x-displayName: Users
 paths:
+  /health/readiness:
+    get:
+      tags:
+        - Health
+      summary: Readiness チェック
+      description: システムがリクエストを受け付ける準備ができているかを確認します。
+      responses:
+        '200':
+          description: システムが利用可能
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: システムが利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /health/liveness:
+    get:
+      tags:
+        - Health
+      summary: Liveness チェック
+      description: システムが正常に動作しているかを確認します。
+      responses:
+        '200':
+          description: システムが稼働中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: システムが停止またはハングアップ中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
   /users:
     get:
       tags:
@@ -26,9 +65,9 @@ paths:
                 $ref: '#/components/schemas/UsersListResponse'
               example:
                 users:
-                  - id: '123e4567-e89b-7acd-afe1-0123456789ab'
-                    name: 'John Doe'
-                    email: 'john.doe@example.com'
+                  - id: 123e4567-e89b-7acd-afe1-0123456789ab
+                    name: John Doe
+                    email: john.doe@example.com
         '500':
           description: Internal server error
           content:
@@ -37,7 +76,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 500
-                message: 'Internal server error'
+                message: Internal server error
     post:
       tags:
         - Users
@@ -51,8 +90,8 @@ paths:
             schema:
               $ref: '#/components/schemas/UserPrototype'
             example:
-              name: 'Jane Smith'
-              email: 'jane.smith@example.com'
+              name: Jane Smith
+              email: jane.smith@example.com
       responses:
         '201':
           description: Created user.
@@ -62,9 +101,9 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
               example:
                 user:
-                  id: '123e4567-e89b-7acd-afe1-abcdefabcdef'
-                  name: 'Jane Smith'
-                  email: 'jane.smith@example.com'
+                  id: 123e4567-e89b-7acd-afe1-abcdefabcdef
+                  name: Jane Smith
+                  email: jane.smith@example.com
         '400':
           description: Bad request
           content:
@@ -73,8 +112,16 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 400
-                message: 'Invalid user data'
-
+                message: Invalid user data
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: Internal server error
   /users/{user_id}:
     parameters:
       - name: user_id
@@ -84,7 +131,8 @@ paths:
         schema:
           type: string
           format: uuid
-          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+          pattern: >-
+            ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
           minLength: 36
           maxLength: 36
     get:
@@ -102,9 +150,9 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
               example:
                 user:
-                  id: '123e4567-e89b-7acd-afe1-0123456789ab'
-                  name: 'John Doe'
-                  email: 'john.doe@example.com'
+                  id: 123e4567-e89b-7acd-afe1-0123456789ab
+                  name: John Doe
+                  email: john.doe@example.com
         '404':
           description: User not found
           content:
@@ -113,7 +161,16 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 404
-                message: 'User not found'
+                message: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: Internal server error
     patch:
       tags:
         - Users
@@ -127,8 +184,8 @@ paths:
             schema:
               $ref: '#/components/schemas/UserPrototype'
             example:
-              name: 'Johnathan Doe'
-              email: 'johnathan.doe@example.com'
+              name: Johnathan Doe
+              email: johnathan.doe@example.com
       responses:
         '200':
           description: Updated user.
@@ -138,9 +195,9 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
               example:
                 user:
-                  id: '123e4567-e89b-7acd-afe1-0123456789ab'
-                  name: 'Johnathan Doe'
-                  email: 'johnathan.doe@example.com'
+                  id: 123e4567-e89b-7acd-afe1-0123456789ab
+                  name: Johnathan Doe
+                  email: johnathan.doe@example.com
         '400':
           description: Bad request
           content:
@@ -149,7 +206,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 400
-                message: 'Invalid user data'
+                message: Invalid user data
         '404':
           description: User not found
           content:
@@ -158,7 +215,16 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 404
-                message: 'User not found'
+                message: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: Internal server error
     delete:
       tags:
         - Users
@@ -176,10 +242,31 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: 404
-                message: 'User not found'
-
+                message: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: Internal server error
 components:
   schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          description: システムの状態
+          enum:
+            - available
+            - unavailable
+      required:
+        - status
+      example:
+        status: available
     User:
       type: object
       description: Representation of a user
@@ -188,33 +275,37 @@ components:
           type: string
           format: uuid
           description: Unique identifier for the user (UUIDv7)
-          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+          pattern: >-
+            ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
           minLength: 36
           maxLength: 36
           x-oapi-codegen-extra-tags:
-            binding: 'required,uuid'
+            binding: required,uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            name: uuid
+            path: github.com/google/uuid
         name:
           type: string
           description: Full name of the user
-          pattern: '^.+$'
+          pattern: ^.+$
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
-            binding: 'required,min=1,max=100'
+            binding: required,min=1,max=100
         email:
           type: string
           format: email
           description: Email address of the user
-          pattern: '^[^@]+@[^@]+\.[^@]+$'
+          pattern: ^[^@]+@[^@]+\.[^@]+$
           minLength: 5
           maxLength: 254
           x-oapi-codegen-extra-tags:
-            binding: 'required,email,min=5,max=254'
+            binding: required,email,min=5,max=254
       required:
         - id
         - name
         - email
-
     UserPrototype:
       type: object
       description: Prototype schema for user create or update
@@ -222,24 +313,22 @@ components:
         name:
           type: string
           description: Full name of the user
-          pattern: '^.+$'
+          pattern: ^.+$
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
-            binding: 'required,min=1,max=100'
+            binding: required,min=1,max=100
         email:
           type: string
           format: email
           description: Email address of the user
-          pattern: '^[^@]+@[^@]+\.[^@]+$'
           minLength: 5
           maxLength: 254
           x-oapi-codegen-extra-tags:
-            binding: 'required,email,min=5,max=254'
+            binding: required,email,min=5,max=254
       required:
         - name
         - email
-
     UsersListResponse:
       type: object
       description: Users list response
@@ -252,7 +341,6 @@ components:
           maxItems: 100
       required:
         - users
-
     UserResponse:
       type: object
       description: Single user response
@@ -261,7 +349,6 @@ components:
           $ref: '#/components/schemas/User'
       required:
         - user
-
     Error:
       type: object
       description: Error response
@@ -278,3 +365,10 @@ components:
       required:
         - code
         - message
+x-tagGroups:
+  - name: Health Check API
+    tags:
+      - Health
+  - name: User API
+    tags:
+      - Users

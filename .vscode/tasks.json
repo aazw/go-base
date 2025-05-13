@@ -55,6 +55,17 @@
         "panel": "new"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "Generate bundled openapi.yaml",
+      "type": "shell",
+      "command": "bash -lc 'redocly join openapi/base.yaml openapi/specs/*.yaml -o .openapi/openapi.yaml'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     }
   ]
 }
