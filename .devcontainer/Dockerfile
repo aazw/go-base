@@ -1,15 +1,25 @@
 # グローバルスコープ (最初のFROMより前に書かれたARGのこと)
+
+# for base images
 ARG TYPESCRIPT_NODE_VERSION=22-bookworm
 ARG GOLANG_VERSION=1.24
 ARG JQ_VERSION=1.7.1
-ARG DOCKERFMT_VERSION=latest
 ARG GOLANGCI_LINT_VERSION=v2.1.6
 ARG SQLC_VERSION=1.29.0
 ARG GOLANG_MIGRATE_VERSION=v4.18.3
-ARG OAPI_CODEGEN_VERSION=v2.4.1
-ARG OGEN_VERSION=latest
 ARG DIVE_VERSION=v0.13.1
-ARG SHFMT_VERSION=latest
+
+# for go install
+ARG DOCKERFMT_VERSION=v0.3.7
+ARG OAPI_CODEGEN_VERSION=v2.4.1
+ARG OGEN_VERSION=v1.12.0
+ARG SHFMT_VERSION=v3.11.0
+
+# for npm tool
+ARG OPENAPI_GENERATOR_CLI_VERSION=2.20.0
+ARG IBM_OPENAPI_VALIDATOR_VERSION=1.35.2
+ARG REDOCLY_CLI_VERSION=1.34.3
+ARG SQL_FORMATTER_VERSION=15.6.1
 
 # ##############################
 # builder images
@@ -106,7 +116,7 @@ COPY --from=golang-migrate-builder /usr/local/bin/migrate /usr/local/bin/
 # openapi-generator-cli
 # https://github.com/OpenAPITools/openapi-generator
 # https://github.com/OpenAPITools/openapi-generator-cli
-RUN yarn global add @openapitools/openapi-generator-cli
+RUN yarn global add @openapitools/openapi-generator-cli@${OPENAPI_GENERATOR_CLI_VERSION}
 
 # oapi-codegen
 # https://github.com/oapi-codegen/oapi-codegen
@@ -120,11 +130,11 @@ RUN go install -v github.com/ogen-go/ogen/cmd/ogen@${OGEN_VERSION}
 
 # lint-openapi
 # https://github.com/IBM/openapi-validator
-RUN yarn global add ibm-openapi-validator
+RUN yarn global add ibm-openapi-validator@${IBM_OPENAPI_VALIDATOR_VERSION}
 
 # redocly-cli
 # https://github.com/Redocly/redocly-cli
-RUN yarn global add @redocly/cli
+RUN yarn global add @redocly/cli@${REDOCLY_CLI_VERSION}
 
 # dive
 # refs above
@@ -137,4 +147,4 @@ RUN go install mvdan.cc/sh/v3/cmd/shfmt@${SHFMT_VERSION}
 
 # sql-formatter
 # https://github.com/sql-formatter-org/sql-formatter
-RUN yarn global add sql-formatter
+RUN yarn global add sql-formatter@${SQL_FORMATTER_VERSION}
