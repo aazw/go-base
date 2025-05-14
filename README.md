@@ -4,8 +4,8 @@
 
 * [ ] VSCode IDE
     * [x] Dev Container by Compose
-    * [ ] Formatter
-    * [ ] Linter
+    * [x] Formatter
+    * [x] Linter
     * [x] Tasks
     * [x] Debugger
 * [x] Dockerfile
@@ -43,3 +43,5 @@
     * [x] uuid v7 for effective indexing in rerational database
 * [ ] Unittest
 * [ ] CI
+    * [ ] Formatter
+    * [ ] Linter
