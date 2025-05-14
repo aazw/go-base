@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/alexedwards/scs/v2"
@@ -13,7 +14,6 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/oapi-codegen/runtime/types"
 
 	"goapp/pkg/api/openapi"
 	"goapp/pkg/db/users"
@@ -79,8 +79,10 @@ func (p *StrictServerImpl) ListUsers(ctx context.Context, request openapi.ListUs
 	items, err := users.New(p.dbPool).ListUsers(ctx)
 	if err != nil {
 		return openapi.ListUsers500JSONResponse{
-			Code:    1,
-			Message: "internal server error",
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
 		}, nil
 	}
 
@@ -89,7 +91,7 @@ func (p *StrictServerImpl) ListUsers(ctx context.Context, request openapi.ListUs
 		retItems = append(retItems, openapi.User{
 			Id:    item.ID,
 			Name:  item.Name,
-			Email: types.Email(item.Email),
+			Email: item.Email,
 		})
 	}
 
@@ -105,8 +107,10 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 	uuidV7, err := uuid.NewV7()
 	if err != nil {
 		return openapi.CreateUser500JSONResponse{
-			Code:    1,
-			Message: "internal server error",
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
 		}, nil
 	}
 
@@ -123,22 +127,28 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 				fallthrough
 			case pgerrcode.ForeignKeyViolation: // 23503
 				return openapi.CreateUser400JSONResponse{
-					Code:    1,
-					Message: "bad request error",
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+					Detail: stringPointer("bad request"),
 				}, nil
 			default:
 				// そのほかの制約違反
 				return openapi.CreateUser500JSONResponse{
-					Code:    1,
-					Message: "internal server error",
+					Type:   stringPointer("/internal_server_error"),
+					Title:  stringPointer(http.StatusText(500)),
+					Status: intPointer(500),
+					Detail: stringPointer("internal server error"),
 				}, nil
 			}
 		}
 
 		// *pgconn.PgError 以外のエラー
 		return openapi.CreateUser500JSONResponse{
-			Code:    1,
-			Message: "internal server error",
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
 		}, nil
 	}
 
@@ -146,7 +156,7 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 		User: openapi.User{
 			Id:    user.ID,
 			Name:  user.Name,
-			Email: types.Email(user.Email),
+			Email: user.Email,
 		},
 	}, nil
 }
@@ -155,17 +165,21 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 // (GET /users/{user_id})
 func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetUserByIdRequestObject) (openapi.GetUserByIdResponseObject, error) {
 
-	user, err := users.New(p.dbPool).GetUser(ctx, request.UserId)
+	user, err := users.New(p.dbPool).GetUser(ctx, uuid.MustParse(request.UserId))
 	switch {
 	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
 		return openapi.GetUserById404JSONResponse{
-			Code:    2,
-			Message: "resource not founc",
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
 		}, nil
 	case err != nil:
 		return openapi.GetUserById500JSONResponse{
-			Code:    1,
-			Message: "internal server error",
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
 		}, nil
 	default:
 		// 正常
@@ -173,7 +187,7 @@ func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetU
 			User: openapi.User{
 				Id:    user.ID,
 				Name:  user.Name,
-				Email: types.Email(user.Email),
+				Email: user.Email,
 			},
 		}, nil
 	}
@@ -190,8 +204,10 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 	switch {
 	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
 		return openapi.UpdateUserById404JSONResponse{
-			Code:    2,
-			Message: "resource not founc",
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
 		}, nil
 	case err != nil:
 		var pgErr *pgconn.PgError
@@ -201,21 +217,27 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 				fallthrough
 			case pgerrcode.ForeignKeyViolation: // 23503
 				return openapi.UpdateUserById400JSONResponse{
-					Code:    1,
-					Message: "bad request error",
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+					Detail: stringPointer("bad request"),
 				}, nil
 			default:
 				// そのほかの制約違反
 				return openapi.UpdateUserById500JSONResponse{
-					Code:    1,
-					Message: "internal server error",
+					Type:   stringPointer("/internal_server_error"),
+					Title:  stringPointer(http.StatusText(500)),
+					Status: intPointer(500),
+					Detail: stringPointer("internal server error"),
 				}, nil
 			}
 		}
 
 		return openapi.UpdateUserById500JSONResponse{
-			Code:    1,
-			Message: "internal server error",
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
 		}, nil
 	default:
 		// 正常
@@ -223,7 +245,7 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 			User: openapi.User{
 				Id:    user.ID,
 				Name:  user.Name,
-				Email: types.Email(user.Email),
+				Email: user.Email,
 			},
 		}, nil
 	}
@@ -233,25 +255,31 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 // (DELETE /users/{user_id})
 func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.DeleteUserByIdRequestObject) (openapi.DeleteUserByIdResponseObject, error) {
 
-	ret, err := users.New(p.dbPool).DeleteUser(ctx, request.UserId)
+	ret, err := users.New(p.dbPool).DeleteUser(ctx, uuid.MustParse(request.UserId))
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
 			return openapi.DeleteUserById404JSONResponse{
-				Code:    2,
-				Message: "resource not founc",
+				Type:   stringPointer("/resource_not_found"),
+				Title:  stringPointer(http.StatusText(404)),
+				Status: intPointer(404),
+				Detail: stringPointer("resource not founc"),
 			}, nil
 		default:
 			return openapi.DeleteUserById500JSONResponse{
-				Code:    1,
-				Message: "internal server error",
+				Type:   stringPointer("/internal_server_error"),
+				Title:  stringPointer(http.StatusText(500)),
+				Status: intPointer(500),
+				Detail: stringPointer("internal server error"),
 			}, nil
 		}
 	}
 	if ret == 0 {
 		return openapi.DeleteUserById404JSONResponse{
-			Code:    1,
-			Message: "resource not founc",
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
 		}, nil
 	}
 	return openapi.DeleteUserById204Response{}, nil

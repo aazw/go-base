@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: RFC7807 Problem Details
+  version: '1.0.0'
+components:
+  schemas:
+    InvalidParam:
+      type: object
+      description: A single invalid parameter and its validation reason.
+      properties:
+        name:
+          type: string
+          description: The name of the invalid field (in JSON).
+          example: email
+        reason:
+          type: string
+          description: The reason why the field is invalid.
+          example: must be a valid email address
+      required:
+        - name
+        - reason
+    ProblemDetailsBase:
+      type: object
+      description: Standard RFC7807 Problem Details base object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+      additionalProperties: true # 拡張許可
+    ProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsBase'
+        - type: object
+          properties:
+            error_code:
+              type: string
+              example: INVALID_PARAMETERS
+            invalid_params:
+              type: array
+              items:
+                $ref: '#/components/schemas/InvalidParam'
+            trace_id:
+              type: string
+              example: 123e4567-e89b-12d3-a456-426614174000

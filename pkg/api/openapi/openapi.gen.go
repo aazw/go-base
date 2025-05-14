@@ -20,7 +20,6 @@ import (
 	uuid "github.com/google/uuid"
 	"github.com/oapi-codegen/runtime"
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthStatusStatus.
@@ -28,15 +27,6 @@ const (
 	Available   HealthStatusStatus = "available"
 	Unavailable HealthStatusStatus = "unavailable"
 )
-
-// Error Error response
-type Error struct {
-	// Code Application-specific error code
-	Code int32 `json:"code"`
-
-	// Message Error message
-	Message string `json:"message"`
-}
 
 // HealthStatus defines model for HealthStatus.
 type HealthStatus struct {
@@ -47,10 +37,42 @@ type HealthStatus struct {
 // HealthStatusStatus システムの状態
 type HealthStatusStatus string
 
+// InvalidParam A single invalid parameter and its validation reason.
+type InvalidParam struct {
+	// Name The name of the invalid field (in JSON).
+	Name string `json:"name"`
+
+	// Reason The reason why the field is invalid.
+	Reason string `json:"reason"`
+}
+
+// ProblemDetails defines model for ProblemDetails.
+type ProblemDetails struct {
+	Detail               *string                `json:"detail,omitempty"`
+	ErrorCode            *string                `json:"error_code,omitempty"`
+	Instance             *string                `json:"instance,omitempty"`
+	InvalidParams        *[]InvalidParam        `json:"invalid_params,omitempty"`
+	Status               *int32                 `json:"status,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	TraceId              *string                `json:"trace_id,omitempty"`
+	Type                 *string                `json:"type,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// ProblemDetailsBase Standard RFC7807 Problem Details base object
+type ProblemDetailsBase struct {
+	Detail               *string                `json:"detail,omitempty"`
+	Instance             *string                `json:"instance,omitempty"`
+	Status               *int32                 `json:"status,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	Type                 *string                `json:"type,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // User Representation of a user
 type User struct {
 	// Email Email address of the user
-	Email openapi_types.Email `binding:"required,email,min=5,max=254" json:"email"`
+	Email string `binding:"required,email,min=5,max=254" json:"email"`
 
 	// Id Unique identifier for the user (UUIDv7)
 	Id uuid.UUID `binding:"required,uuid" json:"id"`
@@ -62,7 +84,7 @@ type User struct {
 // UserPrototype Prototype schema for user create or update
 type UserPrototype struct {
 	// Email Email address of the user
-	Email openapi_types.Email `binding:"required,email,min=5,max=254" json:"email"`
+	Email string `binding:"required,email,min=5,max=254" json:"email"`
 
 	// Name Full name of the user
 	Name string `binding:"required,min=1,max=100" json:"name"`
@@ -85,6 +107,307 @@ type CreateUserJSONRequestBody = UserPrototype
 // UpdateUserByIdJSONRequestBody defines body for UpdateUserById for application/json ContentType.
 type UpdateUserByIdJSONRequestBody = UserPrototype
 
+// Getter for additional properties for ProblemDetails. Returns the specified
+// element and whether it was found
+func (a ProblemDetails) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ProblemDetails
+func (a *ProblemDetails) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ProblemDetails to handle AdditionalProperties
+func (a *ProblemDetails) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["detail"]; found {
+		err = json.Unmarshal(raw, &a.Detail)
+		if err != nil {
+			return fmt.Errorf("error reading 'detail': %w", err)
+		}
+		delete(object, "detail")
+	}
+
+	if raw, found := object["error_code"]; found {
+		err = json.Unmarshal(raw, &a.ErrorCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'error_code': %w", err)
+		}
+		delete(object, "error_code")
+	}
+
+	if raw, found := object["instance"]; found {
+		err = json.Unmarshal(raw, &a.Instance)
+		if err != nil {
+			return fmt.Errorf("error reading 'instance': %w", err)
+		}
+		delete(object, "instance")
+	}
+
+	if raw, found := object["invalid_params"]; found {
+		err = json.Unmarshal(raw, &a.InvalidParams)
+		if err != nil {
+			return fmt.Errorf("error reading 'invalid_params': %w", err)
+		}
+		delete(object, "invalid_params")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["trace_id"]; found {
+		err = json.Unmarshal(raw, &a.TraceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'trace_id': %w", err)
+		}
+		delete(object, "trace_id")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ProblemDetails to handle AdditionalProperties
+func (a ProblemDetails) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Detail != nil {
+		object["detail"], err = json.Marshal(a.Detail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'detail': %w", err)
+		}
+	}
+
+	if a.ErrorCode != nil {
+		object["error_code"], err = json.Marshal(a.ErrorCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'error_code': %w", err)
+		}
+	}
+
+	if a.Instance != nil {
+		object["instance"], err = json.Marshal(a.Instance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'instance': %w", err)
+		}
+	}
+
+	if a.InvalidParams != nil {
+		object["invalid_params"], err = json.Marshal(a.InvalidParams)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'invalid_params': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.Title != nil {
+		object["title"], err = json.Marshal(a.Title)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.TraceId != nil {
+		object["trace_id"], err = json.Marshal(a.TraceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'trace_id': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ProblemDetailsBase. Returns the specified
+// element and whether it was found
+func (a ProblemDetailsBase) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ProblemDetailsBase
+func (a *ProblemDetailsBase) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ProblemDetailsBase to handle AdditionalProperties
+func (a *ProblemDetailsBase) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["detail"]; found {
+		err = json.Unmarshal(raw, &a.Detail)
+		if err != nil {
+			return fmt.Errorf("error reading 'detail': %w", err)
+		}
+		delete(object, "detail")
+	}
+
+	if raw, found := object["instance"]; found {
+		err = json.Unmarshal(raw, &a.Instance)
+		if err != nil {
+			return fmt.Errorf("error reading 'instance': %w", err)
+		}
+		delete(object, "instance")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ProblemDetailsBase to handle AdditionalProperties
+func (a ProblemDetailsBase) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Detail != nil {
+		object["detail"], err = json.Marshal(a.Detail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'detail': %w", err)
+		}
+	}
+
+	if a.Instance != nil {
+		object["instance"], err = json.Marshal(a.Instance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'instance': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.Title != nil {
+		object["title"], err = json.Marshal(a.Title)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Liveness チェック
@@ -101,13 +424,13 @@ type ServerInterface interface {
 	CreateUser(c *gin.Context)
 	// Delete a user by ID
 	// (DELETE /users/{user_id})
-	DeleteUserById(c *gin.Context, userId openapi_types.UUID)
+	DeleteUserById(c *gin.Context, userId string)
 	// Get a user by ID
 	// (GET /users/{user_id})
-	GetUserById(c *gin.Context, userId openapi_types.UUID)
+	GetUserById(c *gin.Context, userId string)
 	// Update a user by ID
 	// (PATCH /users/{user_id})
-	UpdateUserById(c *gin.Context, userId openapi_types.UUID)
+	UpdateUserById(c *gin.Context, userId string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -177,7 +500,7 @@ func (siw *ServerInterfaceWrapper) DeleteUserById(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "user_id" -------------
-	var userId openapi_types.UUID
+	var userId string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "user_id", c.Param("user_id"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
@@ -201,7 +524,7 @@ func (siw *ServerInterfaceWrapper) GetUserById(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "user_id" -------------
-	var userId openapi_types.UUID
+	var userId string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "user_id", c.Param("user_id"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
@@ -225,7 +548,7 @@ func (siw *ServerInterfaceWrapper) UpdateUserById(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "user_id" -------------
-	var userId openapi_types.UUID
+	var userId string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "user_id", c.Param("user_id"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
@@ -345,7 +668,7 @@ func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListUsers500JSONResponse Error
+type ListUsers500JSONResponse ProblemDetails
 
 func (response ListUsers500JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -371,7 +694,7 @@ func (response CreateUser201JSONResponse) VisitCreateUserResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type CreateUser400JSONResponse Error
+type CreateUser400JSONResponse ProblemDetails
 
 func (response CreateUser400JSONResponse) VisitCreateUserResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -380,7 +703,7 @@ func (response CreateUser400JSONResponse) VisitCreateUserResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type CreateUser500JSONResponse Error
+type CreateUser500JSONResponse ProblemDetails
 
 func (response CreateUser500JSONResponse) VisitCreateUserResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -390,7 +713,7 @@ func (response CreateUser500JSONResponse) VisitCreateUserResponse(w http.Respons
 }
 
 type DeleteUserByIdRequestObject struct {
-	UserId openapi_types.UUID `json:"user_id"`
+	UserId string `json:"user_id"`
 }
 
 type DeleteUserByIdResponseObject interface {
@@ -405,7 +728,7 @@ func (response DeleteUserById204Response) VisitDeleteUserByIdResponse(w http.Res
 	return nil
 }
 
-type DeleteUserById404JSONResponse Error
+type DeleteUserById404JSONResponse ProblemDetails
 
 func (response DeleteUserById404JSONResponse) VisitDeleteUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -414,7 +737,7 @@ func (response DeleteUserById404JSONResponse) VisitDeleteUserByIdResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type DeleteUserById500JSONResponse Error
+type DeleteUserById500JSONResponse ProblemDetails
 
 func (response DeleteUserById500JSONResponse) VisitDeleteUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -424,7 +747,7 @@ func (response DeleteUserById500JSONResponse) VisitDeleteUserByIdResponse(w http
 }
 
 type GetUserByIdRequestObject struct {
-	UserId openapi_types.UUID `json:"user_id"`
+	UserId string `json:"user_id"`
 }
 
 type GetUserByIdResponseObject interface {
@@ -440,7 +763,7 @@ func (response GetUserById200JSONResponse) VisitGetUserByIdResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetUserById404JSONResponse Error
+type GetUserById404JSONResponse ProblemDetails
 
 func (response GetUserById404JSONResponse) VisitGetUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -449,7 +772,7 @@ func (response GetUserById404JSONResponse) VisitGetUserByIdResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetUserById500JSONResponse Error
+type GetUserById500JSONResponse ProblemDetails
 
 func (response GetUserById500JSONResponse) VisitGetUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -459,7 +782,7 @@ func (response GetUserById500JSONResponse) VisitGetUserByIdResponse(w http.Respo
 }
 
 type UpdateUserByIdRequestObject struct {
-	UserId openapi_types.UUID `json:"user_id"`
+	UserId string `json:"user_id"`
 	Body   *UpdateUserByIdJSONRequestBody
 }
 
@@ -476,7 +799,7 @@ func (response UpdateUserById200JSONResponse) VisitUpdateUserByIdResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UpdateUserById400JSONResponse Error
+type UpdateUserById400JSONResponse ProblemDetails
 
 func (response UpdateUserById400JSONResponse) VisitUpdateUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -485,7 +808,7 @@ func (response UpdateUserById400JSONResponse) VisitUpdateUserByIdResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UpdateUserById404JSONResponse Error
+type UpdateUserById404JSONResponse ProblemDetails
 
 func (response UpdateUserById404JSONResponse) VisitUpdateUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -494,7 +817,7 @@ func (response UpdateUserById404JSONResponse) VisitUpdateUserByIdResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UpdateUserById500JSONResponse Error
+type UpdateUserById500JSONResponse ProblemDetails
 
 func (response UpdateUserById500JSONResponse) VisitUpdateUserByIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -649,7 +972,7 @@ func (sh *strictHandler) CreateUser(ctx *gin.Context) {
 }
 
 // DeleteUserById operation middleware
-func (sh *strictHandler) DeleteUserById(ctx *gin.Context, userId openapi_types.UUID) {
+func (sh *strictHandler) DeleteUserById(ctx *gin.Context, userId string) {
 	var request DeleteUserByIdRequestObject
 
 	request.UserId = userId
@@ -676,7 +999,7 @@ func (sh *strictHandler) DeleteUserById(ctx *gin.Context, userId openapi_types.U
 }
 
 // GetUserById operation middleware
-func (sh *strictHandler) GetUserById(ctx *gin.Context, userId openapi_types.UUID) {
+func (sh *strictHandler) GetUserById(ctx *gin.Context, userId string) {
 	var request GetUserByIdRequestObject
 
 	request.UserId = userId
@@ -703,7 +1026,7 @@ func (sh *strictHandler) GetUserById(ctx *gin.Context, userId openapi_types.UUID
 }
 
 // UpdateUserById operation middleware
-func (sh *strictHandler) UpdateUserById(ctx *gin.Context, userId openapi_types.UUID) {
+func (sh *strictHandler) UpdateUserById(ctx *gin.Context, userId string) {
 	var request UpdateUserByIdRequestObject
 
 	request.UserId = userId
@@ -740,36 +1063,42 @@ func (sh *strictHandler) UpdateUserById(ctx *gin.Context, userId openapi_types.U
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"stB1kv8HAAD//5CsUZeXHgAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

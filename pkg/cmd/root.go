@@ -214,7 +214,16 @@ func initConfig() error {
 	return nil
 }
 
-func runE(cmd *cobra.Command, args []string) error {
+func runE(cmd *cobra.Command, args []string) (err error) {
+
+	defer func() {
+		if err != nil {
+			logger.Info("application exited with error")
+		} else {
+			logger.Info("application exited normally")
+		}
+	}()
+
 	ctx := context.Background()
 
 	// Config
@@ -228,14 +237,23 @@ func runE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("postgres init error: %w", err)
 	}
-	defer dbPool.Close()
+	defer func() {
+		dbPool.Close()
+		logger.Info("postgres connection closed normally")
+	}()
 
 	// Valkey/Redis
 	redisPool, err := initValkey()
 	if err != nil {
 		return fmt.Errorf("valkey init error: %w", err)
 	}
-	defer redisPool.Close()
+	defer func() {
+		if err := redisPool.Close(); err != nil {
+			logger.Info("valkey connection closure failed")
+			return
+		}
+		logger.Info("valkey connection closed normally")
+	}()
 
 	// Metrics
 	err = initMetrics()
@@ -249,6 +267,8 @@ func runE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("metrics init error: %w", err)
 	}
 	defer shutdown()
+
+	tracer := otel.Tracer(appName)
 
 	// Profiling (Pyroscope)
 	err = initProfiling()
@@ -269,6 +289,12 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add openapi handler
+	problemDetailsRenderer, err := api.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
+	if err != nil {
+		return fmt.Errorf("problem_details_renderer init error: %w", err)
+	}
+	router.Use(problemDetailsRenderer.Middleware())
+
 	serverImpl := api.NewStrictServerImpl(dbPool, redisPool, sessionManager)
 	handler := openapi.NewStrictHandler(serverImpl, nil)
 	openapi.RegisterHandlers(router, handler)
@@ -283,13 +309,13 @@ func runE(cmd *cobra.Command, args []string) error {
 	errCh := make(chan error, 1)
 	defer close(errCh)
 	go func() {
-		fmt.Printf("server listening on %s\n", hostport)
+		logger.Info("server listening", "address", hostport)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- fmt.Errorf("listen error: %w", err)
 		} else {
 			errCh <- nil
 		}
-		fmt.Printf("server shutdown\n")
+		logger.Info("server shutdown")
 	}()
 
 	quit := make(chan os.Signal, 1)
@@ -299,7 +325,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	select {
 	case sig := <-quit:
 		// 終了シグナルを受け取ったら graceful shutdown
-		fmt.Printf("shutdown signal received: %v\n", sig)
+		logger.Info("shutdown signal received", "signal", sig)
 
 		// context.Background() を親に、最大 5 秒後に自動的にキャンセルされる子コンテキスト ctx を生成
 		ctx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
@@ -331,16 +357,17 @@ func initDB(ctx context.Context) (*pgxpool.Pool, error) {
 		User: url.UserPassword(cfg.Postgres.User, cfg.Postgres.Password),
 	}
 
-	cfg, err := pgxpool.ParseConfig(dsn.String())
+	pgCfg, err := pgxpool.ParseConfig(dsn.String())
 	if err != nil {
 		return nil, fmt.Errorf("pgxpool.ParseConfig: %w", err)
 	}
-	cfg.MinConns = 2
-	cfg.MaxConns = 10
-	cfg.MaxConnLifetime = time.Hour
-	cfg.HealthCheckPeriod = time.Minute
+	// https://pkg.go.dev/github.com/jackc/pgx/v4/pgxpool#Config
+	pgCfg.MinConns = cfg.Postgres.MinConns
+	pgCfg.MaxConns = cfg.Postgres.MaxConns
+	pgCfg.MaxConnLifetime = time.Duration(cfg.Postgres.MaxConnLifetimeSeconds) * time.Second
+	pgCfg.HealthCheckPeriod = time.Duration(cfg.Postgres.HealthCheckPeriodSeconds) * time.Second
 
-	dbPool, err := pgxpool.NewWithConfig(ctx, cfg)
+	dbPool, err := pgxpool.NewWithConfig(ctx, pgCfg)
 	if err != nil {
 		return nil, fmt.Errorf("pgxpool.NewWithConfig: %w", err)
 	}
@@ -358,10 +385,11 @@ func initValkey() (*redis.Pool, error) {
 		Dial: func() (redis.Conn, error) {
 			return redis.Dial(
 				"tcp",
+				// https://pkg.go.dev/github.com/gomodule/redigo/redis#DialOption
 				net.JoinHostPort(cfg.Valkey.Host, strconv.Itoa(int(cfg.Valkey.Port))),
-				redis.DialConnectTimeout(3*time.Second),
-				redis.DialReadTimeout(3*time.Second),
-				redis.DialWriteTimeout(3*time.Second),
+				redis.DialConnectTimeout(time.Duration(cfg.Valkey.DialConnectTimeoutSeconds)*time.Second),
+				redis.DialReadTimeout(time.Duration(cfg.Valkey.DialReadTimeoutSeconds)*time.Second),
+				redis.DialWriteTimeout(time.Duration(cfg.Valkey.DialWriteTimeoutSeconds)*time.Second),
 			)
 		},
 	}
@@ -412,6 +440,7 @@ func initTracing() (func() error, error) {
 	ctx := context.Background()
 	exp, err := otlptracehttp.New(
 		ctx,
+		// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.35.0#Option
 		otlptracehttp.WithEndpoint(hostport),
 		otlptracehttp.WithInsecure(), // TLS なし
 	)
@@ -443,6 +472,9 @@ func initTracing() (func() error, error) {
 	}, nil
 }
 
+// var pyroscopeLogger = pyroscope.StandardLogger
+var pyroscopeLogger = &PyroscopeCustomLogger{}
+
 // Grafana Pyroscope
 func initProfiling() error {
 	uri := &url.URL{
@@ -461,7 +493,7 @@ func initProfiling() error {
 		ServerAddress: uri.String(),
 
 		// you can disable logging by setting this to nil
-		// Logger: pyroscopeLogger,
+		Logger: pyroscopeLogger,
 
 		// you can provide static tags via a map:
 		Tags: map[string]string{
@@ -527,17 +559,22 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 			handler = slog.NewJSONHandler(&buf, handlerOptions)
 		}
 		logger := slog.New(handler)
-		logger.Info(
-			"gin access log",
+
+		// https://github.com/gin-gonic/gin/blob/v1.10.0/logger.go#L152-L160
+		args := []any{
 			// "%v |%s %3d %s| %13v | %15s |%s %-7s %s %#v\n%s"
-			"access_timestamp", fmt.Sprintf("%v", param.TimeStamp.Format("2006/01/02 - 15:04:05")),
-			"status_code", fmt.Sprintf("%3d", param.StatusCode),
-			"latency", fmt.Sprintf("%13v", param.Latency),
-			"client_ip", fmt.Sprintf("%15s", param.ClientIP),
-			"method", fmt.Sprintf("%-7s", param.Method),
-			"path", fmt.Sprintf("%#v", param.Path),
-			"error_message", param.ErrorMessage,
-		)
+			"access_timestamp", param.TimeStamp.Format(time.RFC3339Nano),
+			"status_code", param.StatusCode,
+			"latency", param.Latency,
+			"client_ip", param.ClientIP,
+			"method", param.Method,
+			"path", param.Path,
+		}
+		if param.ErrorMessage != "" {
+			args = append(args, "error_message", param.ErrorMessage)
+		}
+
+		logger.Info("gin access log", args...)
 		return buf.String()
 	}))
 
@@ -663,4 +700,43 @@ func SessionLoadAndSave(sm *scs.SessionManager) gin.HandlerFunc {
 			cw.ensureCommit()
 		}
 	}
+}
+
+// https://pkg.go.dev/github.com/grafana/pyroscope-go#Logger
+// https://github.com/grafana/pyroscope-go/blob/v1.2.2/logger.go#L21
+// type Logger interface {
+//     Infof(_ string, _ ...interface{})
+//     Debugf(_ string, _ ...interface{})
+//     Errorf(_ string, _ ...interface{})
+// }
+
+type PyroscopeCustomLogger struct{}
+
+func (p *PyroscopeCustomLogger) Infof(format string, args ...any) {
+
+	// https://github.com/grafana/pyroscope-go/blob/v1.2.2/session.go#L80-L85
+	switch {
+	case format == "starting profiling session:":
+		return
+	case strings.HasPrefix(format, "  AppName:        "):
+		format = "starting profiling session: AppName: %+v"
+	case strings.HasPrefix(format, "  Tags:           "):
+		format = "starting profiling session: Tags: %+v"
+	case strings.HasPrefix(format, "  ProfilingTypes: "):
+		format = "starting profiling session: ProfilingTypes: %+v"
+	case strings.HasPrefix(format, "  DisableGCRuns:  "):
+		format = "starting profiling session: DisableGCRuns: %+v"
+	case strings.HasPrefix(format, "  UploadRate:     "):
+		format = "starting profiling session: UploadRate: %+v"
+	}
+
+	logger.Info("pyroscope", "log", fmt.Sprintf(format, args...))
+}
+
+func (p *PyroscopeCustomLogger) Debugf(format string, args ...any) {
+	logger.Debug("pyroscope", "log", fmt.Sprintf(format, args...))
+}
+
+func (p *PyroscopeCustomLogger) Errorf(format string, args ...any) {
+	logger.Error("pyroscope", "log", fmt.Sprintf(format, args...))
 }

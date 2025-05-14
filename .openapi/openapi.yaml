@@ -73,10 +73,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 500
-                message: Internal server error
+                type: https://example.com/problems/internal
+                title: Internal server error
+                status: 500
+                detail: Unexpected error occurred while processing the request.
+                error_code: INTERNAL_ERROR
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
     post:
       tags:
         - Users
@@ -109,19 +113,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 400
-                message: Invalid user data
+                type: https://example.com/problems/invalid-request
+                title: Your request parameters didn't validate.
+                status: 400
+                detail: Validation failed.
+                error_code: INVALID_PARAMETERS
+                invalid_params:
+                  - name: email
+                    reason: must be a valid email address
+                  - name: name
+                    reason: must not be empty
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 500
-                message: Internal server error
+                type: https://example.com/problems/internal
+                title: Internal server error
+                status: 500
+                detail: Unexpected error occurred while processing the request.
+                error_code: INTERNAL_ERROR
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
   /users/{user_id}:
     parameters:
       - name: user_id
@@ -130,9 +147,6 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
-          pattern: >-
-            ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
           minLength: 36
           maxLength: 36
     get:
@@ -158,19 +172,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 404
-                message: User not found
+                type: https://example.com/problems/user-not-found
+                title: User not found
+                status: 404
+                detail: No user with the given ID was found.
+                error_code: USER_NOT_FOUND
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 500
-                message: Internal server error
+                type: https://example.com/problems/internal
+                title: Internal server error
+                status: 500
+                detail: Unexpected error occurred while processing the request.
+                error_code: INTERNAL_ERROR
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
     patch:
       tags:
         - Users
@@ -203,28 +225,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 400
-                message: Invalid user data
+                type: https://example.com/problems/invalid-request
+                title: Your request parameters didn't validate.
+                status: 400
+                detail: Validation failed.
+                error_code: INVALID_PARAMETERS
+                invalid_params:
+                  - name: email
+                    reason: must be a valid email address
+                  - name: name
+                    reason: must not be empty
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
         '404':
           description: User not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 404
-                message: User not found
+                type: https://example.com/problems/user-not-found
+                title: User not found
+                status: 404
+                detail: No user with the given ID was found.
+                error_code: USER_NOT_FOUND
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 500
-                message: Internal server error
+                type: https://example.com/problems/internal
+                title: Internal server error
+                status: 500
+                detail: Unexpected error occurred while processing the request.
+                error_code: INTERNAL_ERROR
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
     delete:
       tags:
         - Users
@@ -239,19 +278,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 404
-                message: User not found
+                type: https://example.com/problems/user-not-found
+                title: User not found
+                status: 404
+                detail: No user with the given ID was found.
+                error_code: USER_NOT_FOUND
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ProblemDetails'
               example:
-                code: 500
-                message: Internal server error
+                type: https://example.com/problems/internal
+                title: Internal server error
+                status: 500
+                detail: Unexpected error occurred while processing the request.
+                error_code: INTERNAL_ERROR
+                trace_id: 123e4567-e89b-12d3-a456-426614174000
 components:
   schemas:
     HealthStatus:
@@ -267,16 +314,61 @@ components:
         - status
       example:
         status: available
+    InvalidParam:
+      type: object
+      description: A single invalid parameter and its validation reason.
+      properties:
+        name:
+          type: string
+          description: The name of the invalid field (in JSON).
+          example: email
+        reason:
+          type: string
+          description: The reason why the field is invalid.
+          example: must be a valid email address
+      required:
+        - name
+        - reason
+    ProblemDetailsBase:
+      type: object
+      description: Standard RFC7807 Problem Details base object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+      additionalProperties: true
+    ProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsBase'
+        - type: object
+          properties:
+            error_code:
+              type: string
+              example: INVALID_PARAMETERS
+            invalid_params:
+              type: array
+              items:
+                $ref: '#/components/schemas/InvalidParam'
+            trace_id:
+              type: string
+              example: 123e4567-e89b-12d3-a456-426614174000
     User:
       type: object
       description: Representation of a user
       properties:
         id:
           type: string
-          format: uuid
           description: Unique identifier for the user (UUIDv7)
-          pattern: >-
-            ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
           minLength: 36
           maxLength: 36
           x-oapi-codegen-extra-tags:
@@ -288,16 +380,13 @@ components:
         name:
           type: string
           description: Full name of the user
-          pattern: ^.+$
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
             binding: required,min=1,max=100
         email:
           type: string
-          format: email
           description: Email address of the user
-          pattern: ^[^@]+@[^@]+\.[^@]+$
           minLength: 5
           maxLength: 254
           x-oapi-codegen-extra-tags:
@@ -313,14 +402,12 @@ components:
         name:
           type: string
           description: Full name of the user
-          pattern: ^.+$
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
             binding: required,min=1,max=100
         email:
           type: string
-          format: email
           description: Email address of the user
           minLength: 5
           maxLength: 254
@@ -349,22 +436,6 @@ components:
           $ref: '#/components/schemas/User'
       required:
         - user
-    Error:
-      type: object
-      description: Error response
-      properties:
-        code:
-          type: integer
-          format: int32
-          minimum: 0
-          maximum: 1000
-          description: Application-specific error code
-        message:
-          type: string
-          description: Error message
-      required:
-        - code
-        - message
 x-tagGroups:
   - name: Health Check API
     tags:
