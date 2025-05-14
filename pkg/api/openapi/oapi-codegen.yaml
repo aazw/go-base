@@ -1,3 +1,4 @@
+# pkg/api/openapi/oapi-codegen.yaml
 package: openapi
 output: openapi.gen.go
 generate:

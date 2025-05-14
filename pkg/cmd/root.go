@@ -1,3 +1,4 @@
+// pkg/cmd/root.go
 package cmd
 
 import (
