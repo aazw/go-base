@@ -4,6 +4,7 @@
     "ms-azuretools.vscode-containers",
     "ms-azuretools.vscode-docker",
     "esbenp.prettier-vscode",
-    "golang.go"
+    "golang.go",
+    "saoudrizwan.claude-dev"
   ]
 }
