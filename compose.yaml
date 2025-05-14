@@ -10,6 +10,8 @@ services:
     ports:
       - '8080:8080'
 
+  # https://hub.docker.com/r/migrate/migrate
+  # https://github.com/golang-migrate/migrate
   goapp-migrate-up:
     image: migrate/migrate:v4.18.3
     command:
@@ -23,6 +25,8 @@ services:
     profiles:
       - migrate-only
 
+  # https://hub.docker.com/r/migrate/migrate
+  # https://github.com/golang-migrate/migrate
   goapp-migrate-down:
     image: migrate/migrate:v4.18.3
     command:
