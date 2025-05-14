@@ -1,0 +1,64 @@
+name: Bug report
+description: 不具合を報告する
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ありがとうございます！ 以下のフォームにご記入ください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 発生している問題を一文で
+      placeholder: 例）ログインボタンを押しても 500 エラーが返る
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 手順を番号付きで
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待される挙動
+      placeholder: 例）200 が返り、ダッシュボードに遷移する
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の挙動
+      description: スクリーンショットやログを貼ると解析が早まります
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 環境情報
+      placeholder: 例）macOS 14 / Chrome 124
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 重要度
+      options:
+        - S1 - クリティカル
+        - S2 - 高
+        - S3 - 中
+        - S4 - 低
+    validations:
+      required: true
