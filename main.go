@@ -1,7 +1,7 @@
 package main
 
 import (
-	"goapp/pkg/cmd"
+	"github.com/aazw/go-base/pkg/cmd"
 )
 
 func main() {

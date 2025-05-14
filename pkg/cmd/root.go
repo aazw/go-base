@@ -56,9 +56,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	//
-	"goapp/pkg/api"
-	"goapp/pkg/api/openapi"
-	"goapp/pkg/config"
+	"github.com/aazw/go-base/pkg/api"
+	"github.com/aazw/go-base/pkg/api/openapi"
+	"github.com/aazw/go-base/pkg/config"
 )
 
 const (

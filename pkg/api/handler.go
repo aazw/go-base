@@ -16,8 +16,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"goapp/pkg/api/openapi"
-	"goapp/pkg/db/users"
+	"github.com/aazw/go-base/pkg/api/openapi"
+	"github.com/aazw/go-base/pkg/db/users"
 )
 
 // StrictServerInterface の実装用

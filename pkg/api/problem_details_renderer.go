@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"goapp/pkg/api/openapi"
+	"github.com/aazw/go-base/pkg/api/openapi"
 )
 
 func init() {
