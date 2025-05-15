@@ -21,6 +21,7 @@ import (
 	"time"
 
 	// Validator
+	"github.com/gin-contrib/cors"
 	"github.com/go-playground/validator/v10"
 
 	// CLI & Config
@@ -197,6 +198,13 @@ func initConfig() error {
 		return name
 	})
 
+	// Config
+	fmt.Printf("Loaded config: %+v\n", cfg)
+	fmt.Println()
+	buf, _ := yaml.Marshal(cfg)
+	fmt.Printf("%s\n", string(buf))
+
+	// Validation
 	err := validate.Struct(cfg)
 	if err != nil {
 		var invalidValidationError *validator.InvalidValidationError
@@ -226,12 +234,6 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	}()
 
 	ctx := context.Background()
-
-	// Config
-	fmt.Printf("Loaded config: %+v\n", cfg)
-	fmt.Println()
-	buf, _ := yaml.Marshal(cfg)
-	fmt.Printf("%s\n", string(buf))
 
 	// DB (PostgreSQL)
 	dbPool, err := initDB(ctx)
@@ -600,6 +602,19 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 
 	// Metrics Endpoint: (Prometheus)
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// CORS
+	if cfg.Server.CORS.Enabled {
+		// https://github.com/gin-contrib/cors
+		router.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.Server.CORS.AllowOrigins,
+			AllowMethods:     cfg.Server.CORS.AllowMethods,
+			AllowHeaders:     cfg.Server.CORS.AllowHeaders,
+			ExposeHeaders:    cfg.Server.CORS.ExposeHeaders,
+			AllowCredentials: cfg.Server.CORS.AllowCredentials,
+			MaxAge:           time.Hour * time.Duration(cfg.Server.CORS.MaxAgeHour),
+		}))
+	}
 
 	return router, nil
 }
