@@ -2,7 +2,7 @@
 
 ## Progress
 
-* [ ] VSCode IDE
+* [x] VSCode IDE
     * [x] Dev Container by Compose
     * [x] Formatter
     * [x] Linter
@@ -14,6 +14,7 @@
     * [x] PostgreSQL
     * [x] PgWeb
     * [x] Valkey
+    * [x] RedisInsight
     * [x] Grafana
     * [x] Prometheus
     * [x] Grafana Mimir
@@ -21,6 +22,8 @@
     * [x] Grafana Tempo
     * [x] Grafana Pyroscope
     * [x] Grafana Loki with Promtail
+    * [x] K6
+    * [x] openapi viewer (redocly/cli)
 * [ ] GoApp Base
     * [x] cli by cobra
     * [x] configuration by viper
@@ -41,6 +44,8 @@
     * [x] metrics with Grafana Alloy/Mimir or Prometheus
     * [ ] custom error
     * [x] uuid v7 for effective indexing in rerational database
+    * [ ] cors
+    * [ ] rate limit 
 * [ ] Unittest
 * [ ] CI
     * [ ] Formatter

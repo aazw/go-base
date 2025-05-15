@@ -12,14 +12,16 @@
     "postgres",
     "pgweb",
     "valkey",
+    "redisinsight",
     "grafana",
     "mimir",
-    "prometheus",
+    // "prometheus",
     "alloy",
     "tempo",
     "pyroscope",
     "loki",
-    "promtail"
+    "promtail",
+    "openapi-viewer"
   ],
   "customizations": {
     "vscode": {

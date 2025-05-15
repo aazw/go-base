@@ -2,12 +2,16 @@
 package config
 
 type Config struct {
-	Host      string    `mapstructure:"host"      json:"host"      yaml:"host"      validate:"required,hostname"`
-	Port      uint      `mapstructure:"port"      json:"port"      yaml:"port"      validate:"required,port"`
+	Server    Server    `mapstructure:"server"    json:"server"    yaml:"server"    validate:"required"`
 	Postgres  Postgres  `mapstructure:"postgres"  json:"postgres"  yaml:"postgres"  validate:"required"`
 	Valkey    Valkey    `mapstructure:"valkey"    json:"valkey"    yaml:"valkey"    validate:""`
 	Tempo     Tempo     `mapstructure:"tempo"     json:"tempo"     yaml:"tempo"     validate:""`
 	Pyroscope Pyroscope `mapstructure:"pyroscope" json:"pyroscope" yaml:"pyroscope" validate:""`
+}
+
+type Server struct {
+	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required,hostname|ip"`
+	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required,port"`
 }
 
 type Postgres struct {
@@ -57,8 +61,10 @@ type Pyroscope struct {
 
 func NewConfig() Config {
 	return Config{
-		Host: "localhost", //
-		Port: 8080,        //
+		Server: Server{
+			Host: "localhost", //
+			Port: 8080,        //
+		},
 		Postgres: Postgres{
 			Host:                     "localhost", //
 			Port:                     5432,        //

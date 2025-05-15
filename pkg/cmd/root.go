@@ -301,7 +301,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	openapi.RegisterHandlers(router, handler)
 
 	// Run with Graceful Shutdown
-	hostport := net.JoinHostPort(cfg.Host, strconv.Itoa(int(cfg.Port)))
+	hostport := net.JoinHostPort(cfg.Server.Host, strconv.Itoa(int(cfg.Server.Port)))
 	srv := &http.Server{
 		Addr:    hostport,
 		Handler: router,

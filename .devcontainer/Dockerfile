@@ -1,7 +1,7 @@
-# グローバルスコープ (最初のFROMより前に書かれたARGのこと)
-
-# for base images
+# for main image
 ARG TYPESCRIPT_NODE_VERSION=22-bookworm
+
+# for builder images
 ARG GOLANG_VERSION=1.24
 ARG JQ_VERSION=1.7.1
 ARG GOLANGCI_LINT_VERSION=v2.1.6
@@ -11,11 +11,12 @@ ARG DIVE_VERSION=v0.13.1
 
 # for go install
 ARG DOCKERFMT_VERSION=v0.3.7
+ARG DELVE_VERSION=v1.24.2
 ARG OAPI_CODEGEN_VERSION=v2.4.1
 ARG OGEN_VERSION=v1.12.0
 ARG SHFMT_VERSION=v3.11.0
 
-# for npm tool
+# for npm tools
 ARG OPENAPI_GENERATOR_CLI_VERSION=2.20.0
 ARG IBM_OPENAPI_VALIDATOR_VERSION=1.35.2
 ARG REDOCLY_CLI_VERSION=1.34.3
@@ -66,7 +67,7 @@ FROM wagoodman/dive:${DIVE_VERSION} AS dive-builder
 FROM mcr.microsoft.com/devcontainers/typescript-node:${TYPESCRIPT_NODE_VERSION}
 
 RUN apt-get -y update
-RUN apt-get -y install \
+RUN apt-get -y install --no-install-recommends \
     apt-transport-https \
     build-essential \
     ca-certificates \
@@ -75,7 +76,8 @@ RUN apt-get -y install \
     lsb-release \
     software-properties-common \
     curl \
-    git
+    git \
+    procps
 
 # golang
 # refs above
@@ -96,6 +98,11 @@ RUN apt-get -y install docker-ce docker-ce-cli containerd.io docker-compose-plug
 # https://github.com/reteps/dockerfmt
 ARG DOCKERFMT_VERSION
 RUN go install github.com/reteps/dockerfmt@${DOCKERFMT_VERSION}
+
+# delve
+# https://github.com/go-delve/delve
+ARG DELVE_VERSION
+RUN go install github.com/go-delve/delve/cmd/dlv@${DELVE_VERSION}
 
 # jq
 # refs above
@@ -148,3 +155,8 @@ RUN go install mvdan.cc/sh/v3/cmd/shfmt@${SHFMT_VERSION}
 # sql-formatter
 # https://github.com/sql-formatter-org/sql-formatter
 RUN yarn global add sql-formatter@${SQL_FORMATTER_VERSION}
+
+# mkcert
+# https://github.com/FiloSottile/mkcert
+RUN apt-get install -y libnss3-tools \
+    && apt-get install -y mkcert
