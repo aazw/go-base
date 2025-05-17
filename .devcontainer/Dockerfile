@@ -21,6 +21,7 @@ ARG OPENAPI_GENERATOR_CLI_VERSION=2.20.0
 ARG IBM_OPENAPI_VALIDATOR_VERSION=1.35.2
 ARG REDOCLY_CLI_VERSION=1.34.3
 ARG SQL_FORMATTER_VERSION=15.6.1
+ARG PRETTIER_VERSION=3.5.3
 
 # ##############################
 # builder images
@@ -160,3 +161,17 @@ RUN yarn global add sql-formatter@${SQL_FORMATTER_VERSION}
 # https://github.com/FiloSottile/mkcert
 RUN apt-get install -y libnss3-tools \
     && apt-get install -y mkcert
+
+# pipx
+# https://github.com/pypa/pipx
+RUN apt-get -y install pipx
+RUN pipx ensurepath
+
+# gitingest
+# https://github.com/cyclotruc/gitingest
+RUN pipx install gitingest
+
+# prettier
+# https://prettier.io/docs/install
+ARG PRETTIER_VERSION
+RUN yarn global add prettier@${PRETTIER_VERSION}

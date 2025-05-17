@@ -1,0 +1,279 @@
+// pkg/webapi/handler.go
+package webapi
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"net/http"
+	"strings"
+
+	"github.com/alexedwards/scs/v2"
+	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/aazw/go-base/pkg/api"
+	"github.com/aazw/go-base/pkg/models"
+	"github.com/aazw/go-base/pkg/webapi/openapi"
+)
+
+// StrictServerInterface の実装用
+type StrictServerImpl struct {
+	apiHandler *api.Handler
+	dbPool     *pgxpool.Pool
+	redisPool  *redis.Pool
+	sm         *scs.SessionManager
+}
+
+func NewStrictServerImpl(apiHandler *api.Handler, dbPool *pgxpool.Pool, redisPool *redis.Pool, sm *scs.SessionManager) openapi.StrictServerInterface {
+
+	return &StrictServerImpl{
+		apiHandler: apiHandler,
+		dbPool:     dbPool,
+		redisPool:  redisPool,
+		sm:         sm,
+	}
+}
+
+// StrictServerInterfaceの実装
+
+// Liveness チェック
+// (GET /health/liveness)
+func (p *StrictServerImpl) GetHealthLiveness(ctx context.Context, request openapi.GetHealthLivenessRequestObject) (openapi.GetHealthLivenessResponseObject, error) {
+
+	return openapi.GetHealthLiveness200JSONResponse{
+		Status: openapi.Available,
+	}, nil
+}
+
+// Readiness チェック
+// (GET /health/readiness)
+func (p *StrictServerImpl) GetHealthReadiness(ctx context.Context, request openapi.GetHealthReadinessRequestObject) (openapi.GetHealthReadinessResponseObject, error) {
+
+	// ping to relational database
+	if err := p.dbPool.Ping(ctx); err != nil {
+		return openapi.GetHealthReadiness503JSONResponse{
+			Status: openapi.Unavailable,
+		}, nil
+	}
+
+	// ping to redis
+	conn := p.redisPool.Get()
+	defer conn.Close()
+	_, err := redis.String(conn.Do("PING"))
+	if err != nil {
+		return openapi.GetHealthReadiness503JSONResponse{
+			Status: openapi.Unavailable,
+		}, nil
+	}
+
+	return openapi.GetHealthReadiness200JSONResponse{
+		Status: openapi.Available,
+	}, nil
+}
+
+// List all users
+// (GET /users)
+func (p *StrictServerImpl) ListUsers(ctx context.Context, request openapi.ListUsersRequestObject) (openapi.ListUsersResponseObject, error) {
+
+	items, err := p.apiHandler.ListUsers(ctx, models.ListUsersParams{})
+	if err != nil {
+		return openapi.ListUsers500JSONResponse{
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
+		}, nil
+	}
+
+	var retItems []openapi.User
+	for _, item := range items {
+		retItems = append(retItems, openapi.User{
+			Id:    item.ID,
+			Name:  item.Name,
+			Email: item.Email,
+		})
+	}
+
+	return openapi.ListUsers200JSONResponse{
+		Users: retItems,
+	}, nil
+}
+
+// Create a new user
+// (POST /users)
+func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.CreateUserRequestObject) (openapi.CreateUserResponseObject, error) {
+
+	user, err := p.apiHandler.CreateUser(ctx, &models.UserPrototype{
+		Name:  request.Body.Name,
+		Email: strings.ToLower(string(request.Body.Email)),
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code { // ← 文字列か定数で比較
+			case pgerrcode.UniqueViolation: // 23505
+				fallthrough
+			case pgerrcode.ForeignKeyViolation: // 23503
+				return openapi.CreateUser400JSONResponse{
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+					Detail: stringPointer("bad request"),
+				}, nil
+			default:
+				// そのほかの制約違反
+				return openapi.CreateUser500JSONResponse{
+					Type:   stringPointer("/internal_server_error"),
+					Title:  stringPointer(http.StatusText(500)),
+					Status: intPointer(500),
+					Detail: stringPointer("internal server error"),
+				}, nil
+			}
+		}
+
+		// *pgconn.PgError 以外のエラー
+		return openapi.CreateUser500JSONResponse{
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
+		}, nil
+	}
+
+	return openapi.CreateUser201JSONResponse{
+		User: openapi.User{
+			Id:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		},
+	}, nil
+}
+
+// Get a user by ID
+// (GET /users/{user_id})
+func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetUserByIdRequestObject) (openapi.GetUserByIdResponseObject, error) {
+
+	user, err := p.apiHandler.GetUser(ctx, uuid.MustParse(request.UserId))
+	switch {
+	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+		return openapi.GetUserById404JSONResponse{
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
+		}, nil
+	case err != nil:
+		return openapi.GetUserById500JSONResponse{
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
+		}, nil
+	default:
+		// 正常
+		return openapi.GetUserById200JSONResponse{
+			User: openapi.User{
+				Id:    user.ID,
+				Name:  user.Name,
+				Email: user.Email,
+			},
+		}, nil
+	}
+}
+
+// Update a user by ID
+// (PATCH /users/{user_id})
+func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.UpdateUserByIdRequestObject) (openapi.UpdateUserByIdResponseObject, error) {
+
+	user, err := p.apiHandler.UpdateUser(ctx, uuid.MustParse(request.UserId), &models.UserPrototype{
+		Name:  request.Body.Name,
+		Email: string(request.Body.Email),
+	})
+	switch {
+	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+		return openapi.UpdateUserById404JSONResponse{
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
+		}, nil
+	case err != nil:
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code { // ← 文字列か定数で比較
+			case pgerrcode.UniqueViolation: // 23505
+				fallthrough
+			case pgerrcode.ForeignKeyViolation: // 23503
+				return openapi.UpdateUserById400JSONResponse{
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+					Detail: stringPointer("bad request"),
+				}, nil
+			default:
+				// そのほかの制約違反
+				return openapi.UpdateUserById500JSONResponse{
+					Type:   stringPointer("/internal_server_error"),
+					Title:  stringPointer(http.StatusText(500)),
+					Status: intPointer(500),
+					Detail: stringPointer("internal server error"),
+				}, nil
+			}
+		}
+
+		return openapi.UpdateUserById500JSONResponse{
+			Type:   stringPointer("/internal_server_error"),
+			Title:  stringPointer(http.StatusText(500)),
+			Status: intPointer(500),
+			Detail: stringPointer("internal server error"),
+		}, nil
+	default:
+		// 正常
+		return openapi.UpdateUserById200JSONResponse{
+			User: openapi.User{
+				Id:    user.ID,
+				Name:  user.Name,
+				Email: user.Email,
+			},
+		}, nil
+	}
+}
+
+// Delete a user by ID
+// (DELETE /users/{user_id})
+func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.DeleteUserByIdRequestObject) (openapi.DeleteUserByIdResponseObject, error) {
+
+	ret, err := p.apiHandler.DeleteUser(ctx, uuid.MustParse(request.UserId))
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+			return openapi.DeleteUserById404JSONResponse{
+				Type:   stringPointer("/resource_not_found"),
+				Title:  stringPointer(http.StatusText(404)),
+				Status: intPointer(404),
+				Detail: stringPointer("resource not founc"),
+			}, nil
+		default:
+			return openapi.DeleteUserById500JSONResponse{
+				Type:   stringPointer("/internal_server_error"),
+				Title:  stringPointer(http.StatusText(500)),
+				Status: intPointer(500),
+				Detail: stringPointer("internal server error"),
+			}, nil
+		}
+	}
+	if ret == 0 {
+		return openapi.DeleteUserById404JSONResponse{
+			Type:   stringPointer("/resource_not_found"),
+			Title:  stringPointer(http.StatusText(404)),
+			Status: intPointer(404),
+			Detail: stringPointer("resource not founc"),
+		}, nil
+	}
+	return openapi.DeleteUserById204Response{}, nil
+}

@@ -8,7 +8,7 @@ sql:
       - 'db/queries/users/*.sql'
     gen:
       go:
-        out: 'pkg/db/users'
+        out: 'pkg/db/postgres/users'
         package: 'users'
         sql_package: 'pgx/v5'
         # https://docs.sqlc.dev/en/stable/howto/overrides.html

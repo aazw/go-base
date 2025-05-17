@@ -21,7 +21,8 @@
     "pyroscope",
     "loki",
     "promtail",
-    "openapi-viewer"
+    "opentelemetry-collector",
+    "redocly-preview"
   ],
   "customizations": {
     "vscode": {

@@ -1,5 +1,5 @@
-// pkg/api/ptrconv.go
-package api
+// pkg/webapi/ptrconv.go
+package webapi
 
 func stringPointer(str string) *string {
 	if str == "" {

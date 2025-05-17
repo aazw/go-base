@@ -90,6 +90,9 @@ const (
 	// ErrUnknown は定義されていないエラー全般を表す
 	ErrUnknown errorKind = iota
 
+	// 初期化エラー
+	ErrSetupFailed
+
 	// ErrInvalidInput は無効な入力を表す
 	ErrInvalidInput
 
@@ -105,5 +108,6 @@ const (
 // constructors は各 ErrorKind に対するカスタムエラーコンストラクタをキー付きで保持する
 var constructors = map[errorKind]customErrorConstructor{
 	ErrUnknown:      {"UNKNOWN_ERROR", "an unknown error occurred"},
+	ErrSetupFailed:  {"SETUP_FAILED", "setup sequence failed"},
 	ErrInvalidInput: {"INVALID_INPUT", "入力が無効です"},
 }

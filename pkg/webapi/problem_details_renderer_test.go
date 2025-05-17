@@ -1,5 +1,5 @@
-// pkg/api/problem_details_renderer_test.go
-package api
+// pkg/webapi/problem_details_renderer_test.go
+package webapi
 
 import "testing"
 

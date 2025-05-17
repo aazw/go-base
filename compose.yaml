@@ -26,6 +26,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: hogehoge
       POSTGRES_DB: test_db
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # https://hub.docker.com/r/sosedoff/pgweb
   # https://github.com/sosedoff/pgweb
@@ -36,7 +41,8 @@ services:
     environment:
       DATABASE_URL: 'postgresql://postgres:hogehoge@postgres:5432/test_db?sslmode=disable'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   # https://hub.docker.com/r/migrate/migrate
   # https://github.com/golang-migrate/migrate
@@ -52,6 +58,9 @@ services:
       - ${LOCAL_WORKSPACE_FOLDER:-.}/db/migrations:/goapp/db/migrations
     profiles:
       - run-only
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # https://hub.docker.com/r/migrate/migrate
   # https://github.com/golang-migrate/migrate
@@ -67,6 +76,9 @@ services:
       - ${LOCAL_WORKSPACE_FOLDER:-.}/db/migrations:/goapp/db/migrations
     profiles:
       - run-only
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # https://github.com/valkey-io/valkey
   # https://hub.docker.com/r/valkey/valkey
@@ -150,28 +162,11 @@ services:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
-      # - /etc/alloy/config.alloy
-      - /etc/alloy/config-from-prometheus.alloy
+      - /etc/alloy/config.alloy
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-.}/config/alloy:/etc/alloy
     extra_hosts:
       - host.docker.internal:host-gateway
-
-  # このサービスは "run-only" プロファイル有効時(明示的に--profile run-only upしたとき)のみ、up で起動対象に含まれる
-  # 通常のdocker compose upでは無視される → 事実上、docker compose run alloy-convert専用のserviceにできる
-  # ターゲットサービスを明示的に指定した場合、該当サービスの profiles を自動で有効化して実行するため上記runで実行できる
-  alloy-convert:
-    image: grafana/alloy:v1.8.3
-    command:
-      - convert
-      - --source-format=prometheus
-      - --output=/alloy/alloy/config-from-prometheus.alloy
-      - /alloy/prometheus/prometheus.yaml
-    volumes:
-      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/prometheus:/alloy/prometheus
-      - ${LOCAL_WORKSPACE_FOLDER:-.}/config/alloy:/alloy/alloy
-    profiles:
-      - run-only
 
   # ##################################################################
   # Tracing
@@ -264,7 +259,7 @@ services:
 
   # https://hub.docker.com/r/redocly/cli
   # https://github.com/Redocly/redocly-cli
-  openapi-viewer:
+  redocly-preview:
     image: redocly/cli:1.34.3
     ports:
       - '18080:8080'

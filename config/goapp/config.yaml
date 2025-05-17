@@ -1,5 +1,6 @@
 server:
   host: 0.0.0.0
+  port: 8080
 postgres:
   host: postgres
   port: 5432
@@ -7,12 +8,32 @@ postgres:
   password: hogehoge
   database: test_db
   sslmode: disable
+  min_conns: 2
+  max_conns: 10
+  max_conn_lifetime_seconds: 3600
+  health_check_period_seconds: 60
 valkey:
   host: valkey
   port: 6379
-tempo:
-  host: tempo
+  dial_connect_timeout_seconds: 3
+  dial_read_timeout_seconds: 3
+  dial_write_timeout_seconds: 3
+otlp_trace:
+  enabled: true
+  host: opentelemetry-collector
   port: 4318
+otlp_metric:
+  enabled: false
+  host: opentelemetry-collector
+  port: 4318
+otlp_log:
+  enabled: false
+  host: opentelemetry-collector
+  port: 4318
+prometheus:
+  enabled: true
+  metrics_path: /metrics
 pyroscope:
+  enabled: true
   host: pyroscope
   port: 4040

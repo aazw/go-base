@@ -2,11 +2,14 @@
 package config
 
 type Config struct {
-	Server    Server    `mapstructure:"server"    json:"server"    yaml:"server"    validate:"required"`
-	Postgres  Postgres  `mapstructure:"postgres"  json:"postgres"  yaml:"postgres"  validate:"required"`
-	Valkey    Valkey    `mapstructure:"valkey"    json:"valkey"    yaml:"valkey"`
-	Tempo     Tempo     `mapstructure:"tempo"     json:"tempo"     yaml:"tempo"`
-	Pyroscope Pyroscope `mapstructure:"pyroscope" json:"pyroscope" yaml:"pyroscope"`
+	Server     Server     `mapstructure:"server"      json:"server"      yaml:"server"      validate:"required"`
+	Postgres   Postgres   `mapstructure:"postgres"    json:"postgres"    yaml:"postgres"    validate:"required"`
+	Valkey     Valkey     `mapstructure:"valkey"      json:"valkey"      yaml:"valkey"`
+	OTLPTrace  OTLPTrace  `mapstructure:"otlp_trace"  json:"otlp_trace"  yaml:"otlp_trace"`
+	OTLPMetric OTLPMetric `mapstructure:"otlp_metric" json:"otlp_metric" yaml:"otlp_metric"`
+	OTLPLog    OTLPLog    `mapstructure:"otlp_log"    json:"otlp_log"    yaml:"otlp_log"`
+	Prometheus Prometheus `mapstructure:"prometheus"  json:"prometheus"  yaml:"prometheus"`
+	Pyroscope  Pyroscope  `mapstructure:"pyroscope"   json:"pyroscope"   yaml:"pyroscope"`
 }
 
 type Server struct {
@@ -97,15 +100,17 @@ type Valkey struct {
 	DialWriteTimeoutSeconds   uint64 `mapstructure:"dial_write_timeout_seconds"   json:"dial_write_timeout_seconds"   yaml:"dial_write_timeout_seconds"   validate:"gte=0"`
 }
 
-type Tempo struct {
-	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required,hostname|ip"`
-	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required,gt=0,lte=65535"`
+type OTLPTrace struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
 
-	TimeoutSeconds uint64     `mapstructure:"timeout_seconds" json:"timeout_seconds" yaml:"timeout_seconds" validate:"gte=0"`
-	Retry          TempoRetry `mapstructure:"retry"           json:"retry"           yaml:"retry"`
+	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required_if=Enabled true,omitempty,hostname|ip"`
+	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required_if=Enabled true,omitempty,gt=0,lte=65535"`
+
+	TimeoutSeconds uint64         `mapstructure:"timeout_seconds" json:"timeout_seconds" yaml:"timeout_seconds" validate:"gte=0"`
+	Retry          OTLPTraceRetry `mapstructure:"retry"           json:"retry"           yaml:"retry"`
 }
 
-type TempoRetry struct {
+type OTLPTraceRetry struct {
 	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
 
 	InitialIntervalSeconds uint64 `mapstructure:"initial_interval_seconds" json:"initial_interval_seconds" yaml:"initial_interval_seconds" validate:"required_if=Enabled true,omitempty,gt=0"`
@@ -113,9 +118,31 @@ type TempoRetry struct {
 	MaxElapsedTimeSeconds  uint64 `mapstructure:"max_elapsed_time_seconds" json:"max_elapsed_time_seconds" yaml:"max_elapsed_time_seconds" validate:"required_if=Enabled true,omitempty,gtefield=MaxIntervalSeconds"`
 }
 
+type OTLPMetric struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+
+	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required_if=Enabled true,omitempty,hostname|ip"`
+	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required_if=Enabled true,omitempty,gt=0,lte=65535"`
+}
+
+type OTLPLog struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+
+	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required_if=Enabled true,omitempty,hostname|ip"`
+	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required_if=Enabled true,omitempty,gt=0,lte=65535"`
+}
+
+type Prometheus struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+
+	MetricsPath string `mapstructure:"metrics_path" json:"metrics_path" yaml:"metrics_path"`
+}
+
 type Pyroscope struct {
-	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required,hostname|ip"`
-	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required,gt=0,lte=65535"`
+	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+
+	Host string `mapstructure:"host" json:"host" yaml:"host" validate:"required_if=Enabled true,omitempty,hostname|ip"`
+	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required_if=Enabled true,omitempty,gt=0,lte=65535"`
 
 	TenantID string `mapstructure:"tenant_id" json:"tenant_id" yaml:"tenant_id" validate:"omitempty,printascii"`
 }
@@ -123,8 +150,8 @@ type Pyroscope struct {
 func NewConfig() Config {
 	return Config{
 		Server: Server{
-			Host: "localhost", //
-			Port: 8080,
+			Host: "0.0.0.0", //
+			Port: 8080,      //
 			CORS: CORS{
 				Enabled: false,
 			},
@@ -133,31 +160,47 @@ func NewConfig() Config {
 			},
 		},
 		Postgres: Postgres{
-			Host:                     "localhost", //
-			Port:                     5432,        //
-			User:                     "",          //
-			Password:                 "",          //
-			Database:                 "",          //
-			SslMode:                  "disable",   //
-			MinConns:                 2,           // 2
-			MaxConns:                 10,          // 10
-			MaxConnLifetimeSeconds:   3600,        // time.Hour
-			HealthCheckPeriodSeconds: 60,          // time.Minute
+			Host:                     "postgres", //
+			Port:                     5432,       //
+			User:                     "",         //
+			Password:                 "",         //
+			Database:                 "",         //
+			SslMode:                  "disable",  //
+			MinConns:                 2,          // 2
+			MaxConns:                 10,         // 10
+			MaxConnLifetimeSeconds:   3600,       // time.Hour
+			HealthCheckPeriodSeconds: 60,         // time.Minute
 		},
 		Valkey: Valkey{
-			Host:                      "localhost", //
-			Port:                      6379,        //
-			DialConnectTimeoutSeconds: 3,           // 3*time.Second
-			DialReadTimeoutSeconds:    3,           // 3*time.Second
-			DialWriteTimeoutSeconds:   3,           // 3*time.Second
+			Host:                      "valkey", //
+			Port:                      6379,     //
+			DialConnectTimeoutSeconds: 3,        // 3*time.Second
+			DialReadTimeoutSeconds:    3,        // 3*time.Second
+			DialWriteTimeoutSeconds:   3,        // 3*time.Second
 		},
-		Tempo: Tempo{
-			Host: "localhost", //
-			Port: 4318,        //
+		OTLPTrace: OTLPTrace{
+			Enabled: false,
+			Host:    "opentelemetry-collector", //
+			Port:    4318,                      //
+		},
+		OTLPMetric: OTLPMetric{
+			Enabled: false,
+			Host:    "opentelemetry-collector", //
+			Port:    4318,                      //
+		},
+		OTLPLog: OTLPLog{
+			Enabled: false,
+			Host:    "opentelemetry-collector", //
+			Port:    4318,                      //
+		},
+		Prometheus: Prometheus{
+			Enabled:     false,
+			MetricsPath: "/metrics",
 		},
 		Pyroscope: Pyroscope{
-			Host: "localhost", //
-			Port: 4040,        //
+			Enabled: false,
+			Host:    "pyroscope", //
+			Port:    4040,        //
 		},
 	}
 }

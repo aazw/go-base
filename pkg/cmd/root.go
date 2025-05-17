@@ -20,8 +20,11 @@ import (
 	"syscall"
 	"time"
 
-	// Validator
+	// HTTP Server
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
+	// Validator
 	"github.com/go-playground/validator/v10"
 
 	// CLI & Config
@@ -32,18 +35,23 @@ import (
 	// DB (PostgreSQL)
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	// Profiling
+	// Profiling (Pyroscope)
 	"github.com/grafana/pyroscope-go"
 
 	// OpenMetrics (Prometheus)
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	// Tracing
+	// OpenTelemetry
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -53,13 +61,13 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/gomodule/redigo/redis"
 
-	// HTTP Server
-	"github.com/gin-gonic/gin"
-
 	//
 	"github.com/aazw/go-base/pkg/api"
-	"github.com/aazw/go-base/pkg/api/openapi"
+	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/aazw/go-base/pkg/config"
+	"github.com/aazw/go-base/pkg/db/postgres"
+	"github.com/aazw/go-base/pkg/webapi"
+	"github.com/aazw/go-base/pkg/webapi/openapi"
 )
 
 const (
@@ -93,6 +101,8 @@ var handlerOptions = &slog.HandlerOptions{
 }
 var logger *slog.Logger
 
+var tracer = otel.Tracer(appName)
+
 func Execute() error {
 	if err := rootCmd.Execute(); err != nil {
 		return fmt.Errorf("rootCmd: %w", err)
@@ -101,26 +111,16 @@ func Execute() error {
 }
 
 func init() {
+	// gin
 	gin.SetMode(gin.ReleaseMode)
 
+	// viper and cobra
 	f := rootCmd.PersistentFlags()
 
 	// CLI専用フラグ
 	f.StringVar(&logLevel, "log_level", "info", "log level = (info|debug)")
 	f.StringVar(&logFormat, "log_format", "text", "log format = (text|json)")
 	f.StringVarP(&cfgFile, "config", "c", "", "Config file path")
-
-	// // CLI及びConfig共通フラグ
-	// f.String("log_level", "", "log level = (info|debug)")
-	// f.String("log_format", "", "log format = (text|json)")
-
-	// Viperへブリッジ
-	// viper.BindPFlag("log_level", f.Lookup("log_level"))
-	// viper.BindPFlag("log_format", f.Lookup("log_format"))
-
-	// // デフォルト値設定
-	// viper.SetDefault("log_level", "info")
-	// viper.SetDefault("log_format", "text")
 
 	// 環境変数も取り込む
 	viper.SetEnvPrefix(envVarPrefix)
@@ -236,7 +236,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	ctx := context.Background()
 
 	// DB (PostgreSQL)
-	dbPool, err := initDB(ctx)
+	dbPool, err := newPostgresPool(ctx)
 	if err != nil {
 		return fmt.Errorf("postgres init error: %w", err)
 	}
@@ -245,8 +245,18 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 		logger.Info("postgres connection closed normally")
 	}()
 
+	dbHandler, err := postgres.NewHandler(dbPool)
+	if err != nil {
+		return fmt.Errorf("db handler init error: %w", err)
+	}
+
+	apiHander, err := api.NewHandler(dbHandler)
+	if err != nil {
+		return fmt.Errorf("api hander init error: %w", err)
+	}
+
 	// Valkey/Redis
-	redisPool, err := initValkey()
+	redisPool, err := newValkeyPool(ctx)
 	if err != nil {
 		return fmt.Errorf("valkey init error: %w", err)
 	}
@@ -258,25 +268,31 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 		logger.Info("valkey connection closed normally")
 	}()
 
-	// Metrics
-	err = initMetrics()
-	if err != nil {
-		return fmt.Errorf("metrics init error: %w", err)
+	// OpenTelemetry
+	if cfg.OTLPTrace.Enabled || cfg.OTLPMetric.Enabled || cfg.OTLPLog.Enabled {
+		otelShutdown, err := setupOTelSDK(ctx)
+		if err != nil {
+			return fmt.Errorf("otlp init error: %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, otelShutdown(context.Background()))
+		}()
 	}
 
-	// Tracing
-	shutdown, err := initTracing()
-	if err != nil {
-		return fmt.Errorf("metrics init error: %w", err)
+	// Prometheus
+	if cfg.Prometheus.Enabled {
+		err = newPrometheus(ctx)
+		if err != nil {
+			return fmt.Errorf("metrics init error: %w", err)
+		}
 	}
-	defer shutdown()
-
-	tracer := otel.Tracer(appName)
 
 	// Profiling (Pyroscope)
-	err = initProfiling()
-	if err != nil {
-		return fmt.Errorf("profiler init error: %w", err)
+	if cfg.Pyroscope.Enabled {
+		err = newProfiler()
+		if err != nil {
+			return fmt.Errorf("profiler init error: %w", err)
+		}
 	}
 
 	// Session Manager (Valkey)
@@ -292,13 +308,13 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	// Add openapi handler
-	problemDetailsRenderer, err := api.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
+	problemDetailsRenderer, err := webapi.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
 	if err != nil {
 		return fmt.Errorf("problem_details_renderer init error: %w", err)
 	}
 	router.Use(problemDetailsRenderer.Middleware())
 
-	serverImpl := api.NewStrictServerImpl(dbPool, redisPool, sessionManager)
+	serverImpl := webapi.NewStrictServerImpl(apiHander, dbPool, redisPool, sessionManager)
 	handler := openapi.NewStrictHandler(serverImpl, nil)
 	openapi.RegisterHandlers(router, handler)
 
@@ -348,7 +364,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 }
 
 // PostgreSQL
-func initDB(ctx context.Context) (*pgxpool.Pool, error) {
+func newPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
 
 	dsn := &url.URL{
 		Scheme: "postgresql",
@@ -362,7 +378,10 @@ func initDB(ctx context.Context) (*pgxpool.Pool, error) {
 
 	pgCfg, err := pgxpool.ParseConfig(dsn.String())
 	if err != nil {
-		return nil, fmt.Errorf("pgxpool.ParseConfig: %w", err)
+		return nil, cerrors.ErrInvalidInput.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessagef("dns=%s", dsn.String()),
+		)
 	}
 	// https://pkg.go.dev/github.com/jackc/pgx/v4/pgxpool#Config
 	pgCfg.MinConns = cfg.Postgres.MinConns
@@ -379,7 +398,7 @@ func initDB(ctx context.Context) (*pgxpool.Pool, error) {
 }
 
 // Valkey/Redis
-func initValkey() (*redis.Pool, error) {
+func newValkeyPool(_ context.Context) (*redis.Pool, error) {
 
 	pool := &redis.Pool{
 		MaxIdle:     10,
@@ -409,11 +428,148 @@ func initValkey() (*redis.Pool, error) {
 	return pool, nil
 }
 
+// https://opentelemetry.io/docs/languages/go/getting-started/#initialize-the-opentelemetry-sdk
+func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
+	var shutdownFuncs []func(context.Context) error
+	shutdown := func(ctx context.Context) error {
+		var err error
+		for _, fn := range shutdownFuncs {
+			err = errors.Join(err, fn(ctx))
+		}
+		shutdownFuncs = nil
+		return err
+	}
+
+	// 内部ロガーをlog/slogに差し替え
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		logger.Error("opentelemetry export error", "error", err)
+	}))
+
+	// Set up propagator
+	prop := newPropagator()
+	otel.SetTextMapPropagator(prop)
+
+	// Set up trace provider
+	if cfg.OTLPTrace.Enabled {
+		tracerProvider, err := newOTLPTracerProvider(ctx)
+		if err != nil {
+			return shutdown, errors.Join(err, shutdown(ctx))
+		}
+		shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+		otel.SetTracerProvider(tracerProvider)
+	}
+
+	// Set up meter provider
+	if cfg.OTLPMetric.Enabled {
+		meterProvider, err := newOTLPMeterProvider(ctx)
+		if err != nil {
+			return shutdown, errors.Join(err, shutdown(ctx))
+		}
+		shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+		otel.SetMeterProvider(meterProvider)
+	}
+
+	// Set up logger provider
+	if cfg.OTLPLog.Enabled {
+		loggerProvider, err := newOTLPLoggerProvider(ctx)
+		if err != nil {
+			return shutdown, errors.Join(err, shutdown(ctx))
+		}
+		shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+		global.SetLoggerProvider(loggerProvider)
+	}
+
+	return shutdown, nil
+}
+
+func newPropagator() propagation.TextMapPropagator {
+	return propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	)
+}
+
+// For Grafana Tempo
+func newOTLPTracerProvider(ctx context.Context) (*trace.TracerProvider, error) {
+	// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp#example-package
+
+	hostport := net.JoinHostPort(cfg.OTLPTrace.Host, strconv.Itoa(int(cfg.OTLPTrace.Port)))
+
+	// exporter
+	traceExporter, err := otlptracehttp.New(
+		ctx,
+		// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.35.0#Option
+		otlptracehttp.WithEndpoint(hostport),
+		otlptracehttp.WithInsecure(), // TLS なし
+	)
+	if err != nil {
+		return nil, fmt.Errorf("otlptracehttp creation error: %+w", err)
+	}
+
+	// provider
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(
+			traceExporter,
+			// Default is 5s. Set to 1s for demonstrative purposes.
+			trace.WithBatchTimeout(time.Second),
+		),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String(appName),
+		)),
+	)
+	return tracerProvider, nil
+}
+
+// PrometheusによるPull用エンドポイントのための準備
+func newOTLPMeterProvider(ctx context.Context) (*metric.MeterProvider, error) {
+
+	hostport := net.JoinHostPort(cfg.OTLPMetric.Host, strconv.Itoa(int(cfg.OTLPMetric.Port)))
+
+	// exporter
+	metricExporter, err := otlpmetrichttp.New(
+		ctx,
+		otlpmetrichttp.WithEndpoint(hostport),
+		otlpmetrichttp.WithInsecure(), // TLS なし
+	)
+	if err != nil {
+		return nil, fmt.Errorf("otlpmetrichttp creation error: %+w", err)
+	}
+
+	// provider
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(metricExporter,
+			// Default is 1m. Set to 3s for demonstrative purposes.
+			metric.WithInterval(3*time.Second))),
+	)
+	return meterProvider, nil
+}
+
+func newOTLPLoggerProvider(ctx context.Context) (*log.LoggerProvider, error) {
+
+	hostport := net.JoinHostPort(cfg.OTLPLog.Host, strconv.Itoa(int(cfg.OTLPLog.Port)))
+
+	// exporter
+	logExporter, err := otlploghttp.New(
+		ctx,
+		otlploghttp.WithEndpoint(hostport),
+		otlploghttp.WithInsecure(), // TLS なし
+	)
+	if err != nil {
+		return nil, fmt.Errorf("otlploghttp creation error: %+w", err)
+	}
+
+	// provider
+	loggerProvider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+	)
+	return loggerProvider, nil
+}
+
 // Prometheus
 var httpRequests *prometheus.HistogramVec
 
-// PrometheusによるPull用エンドポイントのための準備
-func initMetrics() error {
+func newPrometheus(_ context.Context) error {
 	httpRequests = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: appName,
@@ -429,57 +585,11 @@ func initMetrics() error {
 	return nil
 }
 
-// Grafana Tempo
-func initTracing() (func() error, error) {
-	// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp#example-package
-
-	// 内部ロガーをlog/slogに差し替え
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		logger.Error("opentelemetry export error", "error", err)
-	}))
-
-	hostport := net.JoinHostPort(cfg.Tempo.Host, strconv.Itoa(int(cfg.Tempo.Port)))
-
-	ctx := context.Background()
-	exp, err := otlptracehttp.New(
-		ctx,
-		// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.35.0#Option
-		otlptracehttp.WithEndpoint(hostport),
-		otlptracehttp.WithInsecure(), // TLS なし
-	)
-	if err != nil {
-		return nil, fmt.Errorf("otlptracehttp creation error: %+w", err)
-	}
-
-	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(exp),
-		trace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(appName),
-		)),
-	)
-	otel.SetTracerProvider(tracerProvider)
-
-	otel.SetTextMapPropagator(
-		propagation.NewCompositeTextMapPropagator(
-			propagation.TraceContext{},
-			propagation.Baggage{},
-		),
-	)
-
-	return func() error {
-		if err := tracerProvider.Shutdown(ctx); err != nil {
-			return fmt.Errorf("tracer_provider shutdown error: %+w", err)
-		}
-		return nil
-	}, nil
-}
-
 // var pyroscopeLogger = pyroscope.StandardLogger
 var pyroscopeLogger = &PyroscopeCustomLogger{}
 
 // Grafana Pyroscope
-func initProfiling() error {
+func newProfiler() error {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   net.JoinHostPort(cfg.Pyroscope.Host, strconv.Itoa(int(cfg.Pyroscope.Port))),
@@ -540,7 +650,7 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 	// router := gin.Default()
 	router := gin.New()
 
-	// Custom logger for Access Log
+	// Custom gin logger for Access Log
 	// https://github.com/gin-gonic/gin/blob/v1.10.0/logger.go#L212-L281
 	// https://github.com/gin-gonic/gin/blob/v1.10.0/logger.go#L196-L200
 	// https://github.com/gin-gonic/gin/blob/v1.10.0/logger.go#L60
@@ -585,23 +695,28 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 	router.Use(gin.Recovery())
 
 	// Tracing middleware
-	router.Use(otelgin.Middleware(appName))
+	if cfg.OTLPTrace.Enabled || cfg.OTLPMetric.Enabled || cfg.OTLPLog.Enabled {
+		router.Use(otelgin.Middleware(appName))
+	}
 
 	// Prometheus middleware
-	router.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		duration := time.Since(start).Seconds()
-		status := fmt.Sprint(c.Writer.Status())
-		httpRequests.WithLabelValues(c.FullPath(), c.Request.Method, status).Observe(duration)
-	})
+	if cfg.Prometheus.Enabled {
+		// Custom Metrics
+		router.Use(func(c *gin.Context) {
+			start := time.Now()
+			c.Next()
+			duration := time.Since(start).Seconds()
+			status := fmt.Sprint(c.Writer.Status())
+			httpRequests.WithLabelValues(c.FullPath(), c.Request.Method, status).Observe(duration)
+		})
+
+		// Metrics Endpoint: (Prometheus)
+		router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	}
 
 	// Session Load
 	// designed by https://github.com/alexedwards/scs/blob/v2.8.0/session.go#L132
 	router.Use(SessionLoadAndSave(sessionManager))
-
-	// Metrics Endpoint: (Prometheus)
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// CORS
 	if cfg.Server.CORS.Enabled {

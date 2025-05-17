@@ -1,0 +1,16 @@
+# https://grafana.com/docs/grafana/latest/administration/provisioning/
+# https://grafana.com/docs/grafana/latest/datasources/postgres/
+apiVersion: 1
+datasources:
+  - name: Postgres
+    uid: postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    isDefault: false
+    user: postgres
+    secureJsonData:
+      password: hogehoge
+    jsonData:
+      database: test_db
+      sslmode: 'disable' # disable/require/verify-ca/verify-full
