@@ -27,8 +27,7 @@
       "matchStrings": ["ARG\\s+DOCKER_JQ_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
       "depNameTemplate": "ghcr.io/jqlang/jq",
-      "versioningTemplate": "docker",
-      "registryUrls": ["https://"]
+      "versioningTemplate": "docker"
     },
     {
       "customType": "regex",
