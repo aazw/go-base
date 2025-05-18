@@ -193,7 +193,7 @@ services:
   # https://hub.docker.com/r/grafana/pyroscope
   # https://github.com/grafana/pyroscope
   pyroscope:
-    image: grafana/pyroscope:1.13.2
+    image: grafana/pyroscope:1.13.4
     ports:
       - '4040:4040'
 
