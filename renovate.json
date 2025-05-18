@@ -1,6 +1,163 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  "regexManagers": [
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+TYPESCRIPT_NODE_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "mcr.microsoft.com/devcontainers/typescript-node",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://mcr.microsoft.com"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+DOCKER_GOLANG_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "golang",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://registry-1.docker.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+DOCKER_JQ_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "jqlang/jq",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://ghcr.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": [
+        "ARG\\s+DOCKER_GOLANGCI_LINT_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "golangci/golangci-lint",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://registry-1.docker.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+DOCKER_SQLC_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "sqlc/sqlc",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://registry-1.docker.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": [
+        "ARG\\s+DOCKER_GOLANG_MIGRATE_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "migrate/migrate",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://registry-1.docker.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+DOCKER_DIVE_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "wagoodman/dive",
+      "versioningTemplate": "docker",
+      "registryUrls": ["https://registry-1.docker.io"]
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_DOCKERFMT_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "github.com/reteps/dockerfmt",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_DELVE_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "github.com/go-delve/delve/cmd/dlv",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_OAPI_CODEGEN_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_OGEN_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "github.com/ogen-go/ogen/cmd/ogen",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_SHFMT_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "mvdan.cc/sh/v3/cmd/shfmt",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_MKCERT_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "filippo.io/mkcert",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+GO_DEPENDABOT_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "gomod",
+      "packageNameTemplate": "github.com/dependabot/cli/cmd/dependabot",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": [
+        "ARG\\s+NPM_OPENAPI_GENERATOR_CLI_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@openapitools/openapi-generator-cli",
+      "versioningTemplate": "npm"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": [
+        "ARG\\s+NPM_IBM_OPENAPI_VALIDATOR_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "ibm-openapi-validator",
+      "versioningTemplate": "npm"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+NPM_REDOCLY_CLI_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@redocly/cli",
+      "versioningTemplate": "npm"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": [
+        "ARG\\s+NPM_SQL_FORMATTER_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "sql-formatter",
+      "versioningTemplate": "npm"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+NPM_PRETTIER_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "prettier",
+      "versioningTemplate": "npm"
+    },
+    {
+      "fileMatch": ["^\\.devcontainer/Dockerfile$"],
+      "matchStrings": ["ARG\\s+PIPX_GITINGEST_VERSION=(?<currentValue>\\S+)"],
+      "datasourceTemplate": "pypi",
+      "depNameTemplate": "gitingest",
+      "versioningTemplate": "semver-coerced"
+    }
   ]
 }
