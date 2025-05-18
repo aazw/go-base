@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 
+	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/aazw/go-base/pkg/db"
 	"github.com/aazw/go-base/pkg/models"
 	"github.com/google/uuid"
@@ -27,9 +28,13 @@ func (p *Handler) ListUsers(ctx context.Context, params models.ListUsersParams) 
 
 func (p *Handler) CreateUser(ctx context.Context, prototype *models.UserPrototype) (*models.User, error) {
 
+	// この層ダメ
 	uuidV7, err := uuid.NewV7()
 	if err != nil {
-		return nil, err
+		return nil, cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("faild to negerate a new uuid v7"),
+		)
 	}
 	prototype.ID = uuidV7
 

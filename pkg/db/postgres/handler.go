@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
-	"errors"
 
+	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aazw/go-base/pkg/db/postgres/users"
@@ -28,7 +30,9 @@ func (p *Handler) ListUsers(ctx context.Context, params models.ListUsersParams) 
 
 	records, err := p.usersQueries.ListUsers(ctx)
 	if err != nil {
-		return nil, err
+		return nil, cerrors.ErrDBOperation.New(
+			cerrors.WithCause(err),
+		)
 	}
 
 	users := []*models.User{}
@@ -46,18 +50,27 @@ func (p *Handler) ListUsers(ctx context.Context, params models.ListUsersParams) 
 
 func (p *Handler) CreateUser(ctx context.Context, prototype *models.UserPrototype) (*models.User, error) {
 
-	uuidV7, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
-
 	record, err := p.usersQueries.CreateUser(ctx, users.CreateUserParams{
-		ID:    uuidV7,
+		ID:    prototype.ID,
 		Name:  prototype.Name,
 		Email: prototype.Email,
 	})
 	if err != nil {
-		return nil, err
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			switch pgErr.Code {
+			case "23505": // unique_violation
+				return nil, cerrors.ErrDBDuplicate.New(
+					cerrors.WithCause(err),
+				)
+			case "23503": // foreign_key_violation
+				return nil, cerrors.ErrDBConstraint.New(
+					cerrors.WithCause(err),
+				)
+			}
+		}
+		return nil, cerrors.ErrDBOperation.New(
+			cerrors.WithCause(err),
+		)
 	}
 
 	return &models.User{
@@ -72,9 +85,16 @@ func (p *Handler) CreateUser(ctx context.Context, prototype *models.UserPrototyp
 func (p *Handler) GetUser(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 
 	record, err := p.usersQueries.GetUser(ctx, userID)
-
 	if err != nil {
-		return nil, err
+		if err == pgx.ErrNoRows {
+			return nil, cerrors.ErrDBNotFound.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("record not found"),
+			)
+		}
+		return nil, cerrors.ErrDBOperation.New(
+			cerrors.WithCause(err),
+		)
 	}
 
 	return &models.User{
@@ -94,7 +114,27 @@ func (p *Handler) UpdateUser(ctx context.Context, userID uuid.UUID, prototype *m
 		Email: prototype.Email,
 	})
 	if err != nil {
-		return nil, err
+		if err == pgx.ErrNoRows {
+			return nil, cerrors.ErrDBNotFound.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("record not found"),
+			)
+		}
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			switch pgErr.Code {
+			case "23505": // unique_violation
+				return nil, cerrors.ErrDBDuplicate.New(
+					cerrors.WithCause(err),
+				)
+			case "23503": // foreign_key_violation
+				return nil, cerrors.ErrDBConstraint.New(
+					cerrors.WithCause(err),
+				)
+			}
+		}
+		return nil, cerrors.ErrDBOperation.New(
+			cerrors.WithCause(err),
+		)
 	}
 
 	return &models.User{
@@ -109,13 +149,16 @@ func (p *Handler) UpdateUser(ctx context.Context, userID uuid.UUID, prototype *m
 func (p *Handler) DeleteUSer(ctx context.Context, userID uuid.UUID) error {
 
 	ret, err := p.usersQueries.DeleteUser(ctx, userID)
-
 	if err != nil {
-		return err
+		return cerrors.ErrDBOperation.New(
+			cerrors.WithCause(err),
+		)
 	}
 	if ret == 0 {
-		return errors.New("")
+		return cerrors.ErrDBNotFound.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("record not found"),
+		)
 	}
-
 	return nil
 }

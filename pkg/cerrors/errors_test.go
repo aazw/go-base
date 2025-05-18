@@ -12,8 +12,31 @@ import (
 func TestErrorKindConstructors(t *testing.T) {
 	kinds := []errorKind{
 		ErrUnknown,
-		ErrInvalidInput,
-		// 例: ErrFoo,
+		ErrSystemInternal,
+		ErrResourceExhausted,
+		ErrTimeout,
+		ErrUnavailable,
+		ErrDBConnection,
+		ErrDBOperation,
+		ErrDBConstraint,
+		ErrDBNotFound,
+		ErrDBDuplicate,
+		ErrAPIRequest,
+		ErrAPIResponse,
+		ErrRateLimit,
+		ErrServiceUnavailable,
+		ErrAuthentication,
+		ErrAuthorization,
+		ErrTokenExpired,
+		ErrTokenInvalid,
+		ErrValidation,
+		ErrInvalidFormat,
+		ErrMissingField,
+		ErrInvalidState,
+		ErrBusinessRule,
+		ErrOperationFailed,
+		ErrInvalidOperation,
+		ErrResourceNotFound,
 	}
 
 	// constructors のカバレッジチェック

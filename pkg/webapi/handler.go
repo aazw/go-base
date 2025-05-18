@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aazw/go-base/pkg/api"
+	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/aazw/go-base/pkg/models"
 	"github.com/aazw/go-base/pkg/webapi/openapi"
 )
@@ -56,9 +57,13 @@ func (p *StrictServerImpl) GetHealthReadiness(ctx context.Context, request opena
 
 	// ping to relational database
 	if err := p.dbPool.Ping(ctx); err != nil {
+		cerr := cerrors.ErrServiceUnavailable.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("database is not available"),
+		)
 		return openapi.GetHealthReadiness503JSONResponse{
 			Status: openapi.Unavailable,
-		}, nil
+		}, cerr
 	}
 
 	// ping to redis
@@ -66,9 +71,13 @@ func (p *StrictServerImpl) GetHealthReadiness(ctx context.Context, request opena
 	defer conn.Close()
 	_, err := redis.String(conn.Do("PING"))
 	if err != nil {
+		cerr := cerrors.ErrServiceUnavailable.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("redis is not available"),
+		)
 		return openapi.GetHealthReadiness503JSONResponse{
 			Status: openapi.Unavailable,
-		}, nil
+		}, cerr
 	}
 
 	return openapi.GetHealthReadiness200JSONResponse{
@@ -82,12 +91,15 @@ func (p *StrictServerImpl) ListUsers(ctx context.Context, request openapi.ListUs
 
 	items, err := p.apiHandler.ListUsers(ctx, models.ListUsersParams{})
 	if err != nil {
+		cerr := cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to list users"),
+		)
 		return openapi.ListUsers500JSONResponse{
 			Type:   stringPointer("/internal_server_error"),
 			Title:  stringPointer(http.StatusText(500)),
 			Status: intPointer(500),
-			Detail: stringPointer("internal server error"),
-		}, nil
+		}, cerr
 	}
 
 	var retItems []openapi.User
@@ -113,36 +125,52 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 		Email: strings.ToLower(string(request.Body.Email)),
 	})
 	if err != nil {
+		var cerr error
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			switch pgErr.Code { // ← 文字列か定数で比較
-			case pgerrcode.UniqueViolation: // 23505
-				fallthrough
-			case pgerrcode.ForeignKeyViolation: // 23503
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				cerr = cerrors.ErrDBDuplicate.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("user already exists"),
+				)
 				return openapi.CreateUser400JSONResponse{
 					Type:   stringPointer("/bad_request"),
 					Title:  stringPointer(http.StatusText(400)),
 					Status: intPointer(400),
-					Detail: stringPointer("bad request"),
-				}, nil
+				}, cerr
+			case pgerrcode.ForeignKeyViolation:
+				cerr = cerrors.ErrDBConstraint.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("foreign key constraint violation"),
+				)
+				return openapi.CreateUser400JSONResponse{
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+				}, cerr
 			default:
-				// そのほかの制約違反
+				cerr = cerrors.ErrSystemInternal.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("database error"),
+				)
 				return openapi.CreateUser500JSONResponse{
 					Type:   stringPointer("/internal_server_error"),
 					Title:  stringPointer(http.StatusText(500)),
 					Status: intPointer(500),
-					Detail: stringPointer("internal server error"),
-				}, nil
+				}, cerr
 			}
 		}
 
-		// *pgconn.PgError 以外のエラー
+		cerr = cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to create user"),
+		)
 		return openapi.CreateUser500JSONResponse{
 			Type:   stringPointer("/internal_server_error"),
 			Title:  stringPointer(http.StatusText(500)),
 			Status: intPointer(500),
-			Detail: stringPointer("internal server error"),
-		}, nil
+		}, cerr
 	}
 
 	return openapi.CreateUser201JSONResponse{
@@ -161,19 +189,25 @@ func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetU
 	user, err := p.apiHandler.GetUser(ctx, uuid.MustParse(request.UserId))
 	switch {
 	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+		cerr := cerrors.ErrDBNotFound.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("user not found"),
+		)
 		return openapi.GetUserById404JSONResponse{
 			Type:   stringPointer("/resource_not_found"),
 			Title:  stringPointer(http.StatusText(404)),
 			Status: intPointer(404),
-			Detail: stringPointer("resource not founc"),
-		}, nil
+		}, cerr
 	case err != nil:
+		cerr := cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to get user"),
+		)
 		return openapi.GetUserById500JSONResponse{
 			Type:   stringPointer("/internal_server_error"),
 			Title:  stringPointer(http.StatusText(500)),
 			Status: intPointer(500),
-			Detail: stringPointer("internal server error"),
-		}, nil
+		}, cerr
 	default:
 		// 正常
 		return openapi.GetUserById200JSONResponse{
@@ -196,42 +230,62 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 	})
 	switch {
 	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+		cerr := cerrors.ErrDBNotFound.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("user not found"),
+		)
 		return openapi.UpdateUserById404JSONResponse{
 			Type:   stringPointer("/resource_not_found"),
 			Title:  stringPointer(http.StatusText(404)),
 			Status: intPointer(404),
-			Detail: stringPointer("resource not founc"),
-		}, nil
+		}, cerr
 	case err != nil:
+		var cerr error
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			switch pgErr.Code { // ← 文字列か定数で比較
-			case pgerrcode.UniqueViolation: // 23505
-				fallthrough
-			case pgerrcode.ForeignKeyViolation: // 23503
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				cerr = cerrors.ErrDBDuplicate.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("user already exists"),
+				)
 				return openapi.UpdateUserById400JSONResponse{
 					Type:   stringPointer("/bad_request"),
 					Title:  stringPointer(http.StatusText(400)),
 					Status: intPointer(400),
-					Detail: stringPointer("bad request"),
-				}, nil
+				}, cerr
+			case pgerrcode.ForeignKeyViolation:
+				cerr = cerrors.ErrDBConstraint.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("foreign key constraint violation"),
+				)
+				return openapi.UpdateUserById400JSONResponse{
+					Type:   stringPointer("/bad_request"),
+					Title:  stringPointer(http.StatusText(400)),
+					Status: intPointer(400),
+				}, cerr
 			default:
-				// そのほかの制約違反
+				cerr = cerrors.ErrSystemInternal.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("database error"),
+				)
 				return openapi.UpdateUserById500JSONResponse{
 					Type:   stringPointer("/internal_server_error"),
 					Title:  stringPointer(http.StatusText(500)),
 					Status: intPointer(500),
-					Detail: stringPointer("internal server error"),
-				}, nil
+				}, cerr
 			}
 		}
 
+		cerr = cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to update user"),
+		)
 		return openapi.UpdateUserById500JSONResponse{
 			Type:   stringPointer("/internal_server_error"),
 			Title:  stringPointer(http.StatusText(500)),
 			Status: intPointer(500),
-			Detail: stringPointer("internal server error"),
-		}, nil
+		}, cerr
 	default:
 		// 正常
 		return openapi.UpdateUserById200JSONResponse{
@@ -252,28 +306,36 @@ func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.D
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+			cerr := cerrors.ErrDBNotFound.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("user not found"),
+			)
 			return openapi.DeleteUserById404JSONResponse{
 				Type:   stringPointer("/resource_not_found"),
 				Title:  stringPointer(http.StatusText(404)),
 				Status: intPointer(404),
-				Detail: stringPointer("resource not founc"),
-			}, nil
+			}, cerr
 		default:
+			cerr := cerrors.ErrSystemInternal.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to delete user"),
+			)
 			return openapi.DeleteUserById500JSONResponse{
 				Type:   stringPointer("/internal_server_error"),
 				Title:  stringPointer(http.StatusText(500)),
 				Status: intPointer(500),
-				Detail: stringPointer("internal server error"),
-			}, nil
+			}, cerr
 		}
 	}
 	if ret == 0 {
+		cerr := cerrors.ErrDBNotFound.New(
+			cerrors.WithMessage("user not found"),
+		)
 		return openapi.DeleteUserById404JSONResponse{
 			Type:   stringPointer("/resource_not_found"),
 			Title:  stringPointer(http.StatusText(404)),
 			Status: intPointer(404),
-			Detail: stringPointer("resource not founc"),
-		}, nil
+		}, cerr
 	}
 	return openapi.DeleteUserById204Response{}, nil
 }

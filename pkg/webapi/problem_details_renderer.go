@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/aazw/go-base/pkg/webapi/openapi"
 )
 
@@ -48,7 +49,11 @@ func NewProblemDetailsRenderer(uriReferenceBase string, logger *slog.Logger, tra
 	// uriReferenceBase
 	uriRef, err := url.Parse(uriReferenceBase)
 	if err != nil {
-		return nil, fmt.Errorf("problem_details_renderer init error: %w", err)
+		return nil, cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to initialize problem details renderer"),
+			cerrors.WithMessagef("url: %s", uriReferenceBase),
+		)
 	}
 	uriRef.Path = path.Join("/", "/validation-error")
 	uriReference := uriRef.String()

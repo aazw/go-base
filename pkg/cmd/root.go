@@ -105,7 +105,14 @@ var tracer = otel.Tracer(appName)
 
 func Execute() error {
 	if err := rootCmd.Execute(); err != nil {
-		return fmt.Errorf("rootCmd: %w", err)
+		var cerr *cerrors.CustomError
+		if errors.As(err, &cerr) {
+			return cerrors.AppendCheckpoint(err)
+		}
+		return cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to execute root command"),
+		)
 	}
 	return nil
 }
@@ -136,7 +143,9 @@ func initConfig() error {
 	case "debug":
 		handlerOptions.Level = slog.LevelDebug
 	default:
-		return fmt.Errorf("invalid log level found: \"%s\" is invalid", logLevel)
+		return cerrors.ErrValidation.New(
+			cerrors.WithMessagef("invalid log level: %s", logLevel),
+		)
 	}
 
 	// log format
@@ -147,7 +156,9 @@ func initConfig() error {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stderr, handlerOptions)
 	default:
-		return fmt.Errorf("invalid log format found: \"%s\" is invalid", logFormat)
+		return cerrors.ErrValidation.New(
+			cerrors.WithMessagef("invalid log format: %s", logFormat),
+		)
 	}
 	logger = slog.New(handler)
 
@@ -158,9 +169,15 @@ func initConfig() error {
 		_, err := os.Stat(cfgFile)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("config file not found: %w", err)
+				return cerrors.ErrValidation.New(
+					cerrors.WithCause(err),
+					cerrors.WithMessage("config file not found"),
+				)
 			}
-			return fmt.Errorf("internal unknown error: %w", err)
+			return cerrors.ErrSystemInternal.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to check config file"),
+			)
 		}
 		viper.SetConfigFile(cfgFile)
 	} else {
@@ -175,13 +192,19 @@ func initConfig() error {
 		if _, notFound := err.(*viper.ConfigFileNotFoundError); notFound {
 			logger.Info("config file not found, using default configuration")
 		} else {
-			return fmt.Errorf("unknown error: %w", err)
+			return cerrors.ErrSystemInternal.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to read config file"),
+			)
 		}
 	}
 
 	// unmarshal to struct
 	if err := viper.Unmarshal(&cfg); err != nil {
-		return fmt.Errorf("unmarshal: %w", err)
+		return cerrors.ErrValidation.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to unmarshal config"),
+		)
 	}
 
 	// validate values
@@ -209,15 +232,24 @@ func initConfig() error {
 	if err != nil {
 		var invalidValidationError *validator.InvalidValidationError
 		if errors.As(err, &invalidValidationError) {
-			return fmt.Errorf("validation internal error: %w", err)
+			return cerrors.ErrSystemInternal.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("validation internal error"),
+			)
 		}
 
 		var validateErrs validator.ValidationErrors
 		if errors.As(err, &validateErrs) {
-			return fmt.Errorf("invalid config: %w", err)
+			return cerrors.ErrValidation.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("invalid config"),
+			)
 		}
 
-		return fmt.Errorf("internal unknown error: %w", err)
+		return cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("unknown validation error"),
+		)
 	}
 
 	return nil
@@ -238,7 +270,10 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	// DB (PostgreSQL)
 	dbPool, err := newPostgresPool(ctx)
 	if err != nil {
-		return fmt.Errorf("postgres init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize postgres connection"),
+		)
 	}
 	defer func() {
 		dbPool.Close()
@@ -247,18 +282,27 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 
 	dbHandler, err := postgres.NewHandler(dbPool)
 	if err != nil {
-		return fmt.Errorf("db handler init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize database handler"),
+		)
 	}
 
 	apiHander, err := api.NewHandler(dbHandler)
 	if err != nil {
-		return fmt.Errorf("api hander init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize API handler"),
+		)
 	}
 
 	// Valkey/Redis
 	redisPool, err := newValkeyPool(ctx)
 	if err != nil {
-		return fmt.Errorf("valkey init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize redis connection"),
+		)
 	}
 	defer func() {
 		if err := redisPool.Close(); err != nil {
@@ -272,7 +316,10 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	if cfg.OTLPTrace.Enabled || cfg.OTLPMetric.Enabled || cfg.OTLPLog.Enabled {
 		otelShutdown, err := setupOTelSDK(ctx)
 		if err != nil {
-			return fmt.Errorf("otlp init error: %w", err)
+			return cerrors.AppendCheckpoint(
+				err,
+				cerrors.WithCheckpointMessage("failed to initialize OpenTelemetry SDK"),
+			)
 		}
 		defer func() {
 			err = errors.Join(err, otelShutdown(context.Background()))
@@ -283,7 +330,10 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	if cfg.Prometheus.Enabled {
 		err = newPrometheus(ctx)
 		if err != nil {
-			return fmt.Errorf("metrics init error: %w", err)
+			return cerrors.AppendCheckpoint(
+				err,
+				cerrors.WithCheckpointMessage("failed to initialize metrics"),
+			)
 		}
 	}
 
@@ -291,26 +341,38 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	if cfg.Pyroscope.Enabled {
 		err = newProfiler()
 		if err != nil {
-			return fmt.Errorf("profiler init error: %w", err)
+			return cerrors.AppendCheckpoint(
+				err,
+				cerrors.WithCheckpointMessage("failed to initialize profiler"),
+			)
 		}
 	}
 
 	// Session Manager (Valkey)
 	sessionManager, err := initSessionManager(redisPool)
 	if err != nil {
-		return fmt.Errorf("session manager init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize session manager"),
+		)
 	}
 
 	// Gin
 	router, err := setupRouter(sessionManager)
 	if err != nil {
-		return fmt.Errorf("router init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize router"),
+		)
 	}
 
 	// Add openapi handler
 	problemDetailsRenderer, err := webapi.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
 	if err != nil {
-		return fmt.Errorf("problem_details_renderer init error: %w", err)
+		return cerrors.AppendCheckpoint(
+			err,
+			cerrors.WithCheckpointMessage("failed to initialize problem details renderer"),
+		)
 	}
 	router.Use(problemDetailsRenderer.Middleware())
 
@@ -330,7 +392,10 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	go func() {
 		logger.Info("server listening", "address", hostport)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- fmt.Errorf("listen error: %w", err)
+			errCh <- cerrors.ErrUnavailable.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to start server"),
+			)
 		} else {
 			errCh <- nil
 		}
@@ -352,12 +417,18 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 
 		// 新規接続の受付停止、既存接続の完了待ち
 		if err := srv.Shutdown(ctx); err != nil {
-			return fmt.Errorf("shutdown error: %w", err)
+			return cerrors.ErrUnavailable.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to shutdown server"),
+			)
 		}
 		return nil
 	case err := <-errCh:
 		if err != nil {
-			return fmt.Errorf("unknown error: %w", err)
+			return cerrors.AppendCheckpoint(
+				err,
+				cerrors.WithCheckpointMessage("unexpected error occurred"),
+			)
 		}
 		return nil
 	}
@@ -378,7 +449,7 @@ func newPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
 
 	pgCfg, err := pgxpool.ParseConfig(dsn.String())
 	if err != nil {
-		return nil, cerrors.ErrInvalidInput.New(
+		return nil, cerrors.ErrValidation.New(
 			cerrors.WithCause(err),
 			cerrors.WithMessagef("dns=%s", dsn.String()),
 		)
@@ -391,7 +462,10 @@ func newPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
 
 	dbPool, err := pgxpool.NewWithConfig(ctx, pgCfg)
 	if err != nil {
-		return nil, fmt.Errorf("pgxpool.NewWithConfig: %w", err)
+		return nil, cerrors.ErrDBConnection.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to create database connection pool"),
+		)
 	}
 
 	return dbPool, nil
@@ -421,7 +495,10 @@ func newValkeyPool(_ context.Context) (*redis.Pool, error) {
 	_, err := redis.String(conn.Do("PING"))
 	if err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("redis ping error: %w", err)
+		return nil, cerrors.ErrDBConnection.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to connect to redis"),
+		)
 	}
 	conn.Close()
 
@@ -437,7 +514,14 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 			err = errors.Join(err, fn(ctx))
 		}
 		shutdownFuncs = nil
-		return err
+
+		if err != nil {
+			return cerrors.ErrUnavailable.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to shutdown server"),
+			)
+		}
+		return nil
 	}
 
 	// 内部ロガーをlog/slogに差し替え
@@ -503,7 +587,10 @@ func newOTLPTracerProvider(ctx context.Context) (*trace.TracerProvider, error) {
 		otlptracehttp.WithInsecure(), // TLS なし
 	)
 	if err != nil {
-		return nil, fmt.Errorf("otlptracehttp creation error: %+w", err)
+		return nil, cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to create trace exporter"),
+		)
 	}
 
 	// provider
@@ -533,7 +620,10 @@ func newOTLPMeterProvider(ctx context.Context) (*metric.MeterProvider, error) {
 		otlpmetrichttp.WithInsecure(), // TLS なし
 	)
 	if err != nil {
-		return nil, fmt.Errorf("otlpmetrichttp creation error: %+w", err)
+		return nil, cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to create metric exporter"),
+		)
 	}
 
 	// provider
@@ -556,7 +646,10 @@ func newOTLPLoggerProvider(ctx context.Context) (*log.LoggerProvider, error) {
 		otlploghttp.WithInsecure(), // TLS なし
 	)
 	if err != nil {
-		return nil, fmt.Errorf("otlploghttp creation error: %+w", err)
+		return nil, cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to create log exporter"),
+		)
 	}
 
 	// provider
@@ -711,7 +804,7 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 		})
 
 		// Metrics Endpoint: (Prometheus)
-		router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+		router.GET(cfg.Prometheus.MetricsPath, gin.WrapH(promhttp.Handler()))
 	}
 
 	// Session Load
