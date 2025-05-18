@@ -42,9 +42,9 @@
   - [x] tracing with Grafana Tempo
   - [x] profiling with Grafana Pyroscope
   - [x] metrics with Grafana Alloy/Mimir or Prometheus
-  - [ ] custom error
+  - [x] custom error
   - [x] uuid v7 for effective indexing in rerational database
-  - [ ] cors
+  - [x] cors
   - [ ] rate limit
 - [ ] Unittest
 - [ ] CI

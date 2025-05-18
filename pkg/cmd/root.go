@@ -63,11 +63,11 @@ import (
 
 	//
 	"github.com/aazw/go-base/pkg/api"
+	"github.com/aazw/go-base/pkg/api/openapi"
 	"github.com/aazw/go-base/pkg/cerrors"
 	"github.com/aazw/go-base/pkg/config"
 	"github.com/aazw/go-base/pkg/db/postgres"
-	"github.com/aazw/go-base/pkg/webapi"
-	"github.com/aazw/go-base/pkg/webapi/openapi"
+	"github.com/aazw/go-base/pkg/operations"
 )
 
 const (
@@ -288,7 +288,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 		)
 	}
 
-	apiHander, err := api.NewHandler(dbHandler)
+	opsHander, err := operations.NewHandler(dbHandler)
 	if err != nil {
 		return cerrors.AppendCheckpoint(
 			err,
@@ -367,7 +367,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	// Add openapi handler
-	problemDetailsRenderer, err := webapi.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
+	problemDetailsRenderer, err := api.NewProblemDetailsRenderer("https://example.com/", logger, tracer)
 	if err != nil {
 		return cerrors.AppendCheckpoint(
 			err,
@@ -376,7 +376,7 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	}
 	router.Use(problemDetailsRenderer.Middleware())
 
-	serverImpl := webapi.NewStrictServerImpl(apiHander, dbPool, redisPool, sessionManager)
+	serverImpl := api.NewStrictServerImpl(opsHander, dbPool, redisPool, sessionManager)
 	handler := openapi.NewStrictHandler(serverImpl, nil)
 	openapi.RegisterHandlers(router, handler)
 

@@ -1,5 +1,5 @@
-// pkg/webapi/problem_details_renderer.go
-package webapi
+// pkg/api/problem_details_renderer.go
+package api
 
 import (
 	"errors"
@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	"github.com/aazw/go-base/pkg/api/openapi"
 	"github.com/aazw/go-base/pkg/cerrors"
-	"github.com/aazw/go-base/pkg/webapi/openapi"
 )
 
 func init() {
