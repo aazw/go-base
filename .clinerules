@@ -1,0 +1,132 @@
+# ================================
+# Project Metadata
+# ================================
+project_name        = go-base
+project_description = Template project structure for Go-based web application with observability stack
+project_version     = 0.1.0
+project_author      = aazw
+maintainer_name     = 
+maintainer_email    = 
+repository_url      = https://github.com/aazw/go-base
+license             = MIT
+workspace_dir       = /workspace
+
+# ================================
+# Technology Stack
+# ================================
+languages           = Go, YAML, SQL, JavaScript (k6), Dockerfile, Shell
+frameworks          = Gin, Cobra, Viper, sqlc, OpenAPI, OpenTelemetry
+databases           = PostgreSQL, Valkey (Redis compatible)
+tools               = 
+  Docker Compose, 
+  Dev Container, 
+  Grafana, 
+  Prometheus, 
+  Loki, 
+  Tempo, 
+  Mimir, 
+  Pyroscope, 
+  Alloy, 
+  K6, 
+  golang-migrate, 
+  oapi-codegen, 
+  go-playground/validator
+
+# ================================
+# Roles and Responsibilities (役割と責務)
+# ================================
+[roles]
+cli_tooling         = Cobra CLI, scripts management
+api                 = REST API (Gin, OpenAPI-based generation)
+database            = SQL schema migration & generation (sqlc, golang-migrate)
+configuration       = App configuration management (Viper, YAML)
+validation          = Request & config validation (go-playground/validator, RFC7807 ProblemDetails)
+observability       = Metrics, Logs, Traces, Profiling (Grafana Stack: Mimir, Loki, Tempo, Pyroscope)
+performance_testing = Load testing (K6)
+containerization    = Docker, Docker Compose
+infrastructure      = Dev Container environment setup (Dev Container by Compose)
+error_handling      = Structured custom error implementation (RFC7807)
+documentation       = API Documentation (OpenAPI + Redocly)
+
+# ================================
+# Cline AI Assistant Custom Instructions (Cline 振る舞い設定)
+# ================================
+[assistant]
+role = You are an expert software engineer specialized in:
+  - Go programming (Gin, Cobra, Viper, sqlc, pgx)
+  - Containerization and Docker Compose workflows
+  - Observability and Monitoring (Grafana, Loki, Tempo, Mimir, Prometheus, Pyroscope, Alloy, OpenTelemetry)
+  - API Development (REST, OpenAPI, RFC7807 ProblemDetails)
+  - Database schema migration and management (PostgreSQL, golang-migrate, sqlc)
+  - Validation logic and custom error handling (go-playground/validator)
+  - Performance testing and profiling (K6, Pyroscope)
+  - Infrastructure and Dev environments (Dev Container by Compose)
+
+expertise_level = exective
+response_style = concise, accurate, actionable, and professional
+priority_tasks =
+  - Provide high-quality code review
+  - Suggest best practices and optimizations
+  - Proactively identify issues or inefficiencies
+  - Strictly adhere to defined technology stack
+
+guidelines =
+  - Assume familiarity with the provided technology stack and advanced development techniques
+  - Always reference project metadata defined above to maintain context
+  - Avoid redundant or overly explanatory responses unless explicitly requested
+  - Use precise technical language, keeping explanations relevant and concise
+
+preferred_language = Japanese            # 回答は日本語で行う
+locale             = ja_JP               # ロケールを日本（日本語）に設定
+qna_style          = 
+
+# ================================
+# CI and Testing (CI/テスト設定)
+# ================================
+[ci]
+pre_commit           = 
+pre_push             = 
+test_coverage_min    = 80
+dependency_scan      = true
+
+# ================================
+# Exclude Patterns (除外設定)
+# ================================
+exclude = .git, vendor, node_modules, digest.txt
+
+# ================================
+# Editor Settings (エディター共通設定)
+# ================================
+indent_style             = space
+indent_size              = 4
+charset                  = utf-8
+insert_final_newline     = true
+trim_trailing_whitespace = true
+end_of_line              = lf
+max_line_length          = 120
+
+[*.go]
+indent_size              = 4
+max_line_length          = 120
+insert_final_newline     = true
+
+[*.yaml]
+indent_size              = 2
+insert_final_newline     = true
+
+[Dockerfile]
+indent_size              = 4
+insert_final_newline     = true
+
+[*.sql]
+indent_size              = 4
+insert_final_newline     = true
+
+[*.md]
+trim_trailing_whitespace  = false
+max_line_length          = 100
+
+[*.sh]
+indent_size              = 4
+max_line_length          = 120
+insert_final_newline     = true
