@@ -1,5 +1,5 @@
-// pkg/cmd/root.go
-package cmd
+// cmd/goapp/main.go
+package main
 
 import (
 	"bytes"
@@ -103,20 +103,6 @@ var logger *slog.Logger
 
 var tracer = otel.Tracer(appName)
 
-func Execute() error {
-	if err := rootCmd.Execute(); err != nil {
-		var cerr *cerrors.CustomError
-		if errors.As(err, &cerr) {
-			return cerrors.AppendCheckpoint(err)
-		}
-		return cerrors.ErrSystemInternal.New(
-			cerrors.WithCause(err),
-			cerrors.WithMessage("failed to execute root command"),
-		)
-	}
-	return nil
-}
-
 func init() {
 	// gin
 	gin.SetMode(gin.ReleaseMode)
@@ -133,6 +119,13 @@ func init() {
 	viper.SetEnvPrefix(envVarPrefix)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+	logger.Info("application exited normally")
 }
 
 func initConfig() error {
@@ -256,14 +249,6 @@ func initConfig() error {
 }
 
 func runE(cmd *cobra.Command, args []string) (err error) {
-
-	defer func() {
-		if err != nil {
-			logger.Info("application exited with error")
-		} else {
-			logger.Info("application exited normally")
-		}
-	}()
 
 	ctx := context.Background()
 
