@@ -3,7 +3,7 @@ info:
   title: Health Check API
   version: 1.0.0
   description: |
-    システムの Readiness/Liveness を確認するためのヘルスチェック API。
+    システムの Readiness/Liveness を確認するためのヘルスチェック API
 
 tags:
   - name: Health
@@ -15,7 +15,7 @@ paths:
       tags:
         - Health
       summary: Readiness チェック
-      description: システムがリクエストを受け付ける準備ができているかを確認します。
+      description: システムがリクエストを受け付ける準備ができているかを確認します
       responses:
         '200':
           description: システムが利用可能
@@ -35,7 +35,7 @@ paths:
       tags:
         - Health
       summary: Liveness チェック
-      description: システムが正常に動作しているかを確認します。
+      description: システムが正常に動作しているかを確認します
       responses:
         '200':
           description: システムが稼働中

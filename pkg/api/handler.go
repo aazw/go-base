@@ -96,9 +96,9 @@ func (p *StrictServerImpl) ListUsers(ctx context.Context, request openapi.ListUs
 			cerrors.WithMessage("failed to list users"),
 		)
 		return openapi.ListUsers500JSONResponse{
-			Type:   stringPointer("/internal_server_error"),
-			Title:  stringPointer(http.StatusText(500)),
-			Status: intPointer(500),
+			Type:   PtrOrNil("/internal_server_error"),
+			Title:  PtrOrNil(http.StatusText(500)),
+			Status: PtrOrNil(int32(500)),
 		}, cerr
 	}
 
@@ -135,9 +135,9 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 					cerrors.WithMessage("user already exists"),
 				)
 				return openapi.CreateUser400JSONResponse{
-					Type:   stringPointer("/bad_request"),
-					Title:  stringPointer(http.StatusText(400)),
-					Status: intPointer(400),
+					Type:   PtrOrNil("/bad_request"),
+					Title:  PtrOrNil(http.StatusText(400)),
+					Status: PtrOrNil(int32(400)),
 				}, cerr
 			case pgerrcode.ForeignKeyViolation:
 				cerr = cerrors.ErrDBConstraint.New(
@@ -145,9 +145,9 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 					cerrors.WithMessage("foreign key constraint violation"),
 				)
 				return openapi.CreateUser400JSONResponse{
-					Type:   stringPointer("/bad_request"),
-					Title:  stringPointer(http.StatusText(400)),
-					Status: intPointer(400),
+					Type:   PtrOrNil("/bad_request"),
+					Title:  PtrOrNil(http.StatusText(400)),
+					Status: PtrOrNil(int32(400)),
 				}, cerr
 			default:
 				cerr = cerrors.ErrSystemInternal.New(
@@ -155,9 +155,9 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 					cerrors.WithMessage("database error"),
 				)
 				return openapi.CreateUser500JSONResponse{
-					Type:   stringPointer("/internal_server_error"),
-					Title:  stringPointer(http.StatusText(500)),
-					Status: intPointer(500),
+					Type:   PtrOrNil("/internal_server_error"),
+					Title:  PtrOrNil(http.StatusText(500)),
+					Status: PtrOrNil(int32(500)),
 				}, cerr
 			}
 		}
@@ -167,9 +167,9 @@ func (p *StrictServerImpl) CreateUser(ctx context.Context, request openapi.Creat
 			cerrors.WithMessage("failed to create user"),
 		)
 		return openapi.CreateUser500JSONResponse{
-			Type:   stringPointer("/internal_server_error"),
-			Title:  stringPointer(http.StatusText(500)),
-			Status: intPointer(500),
+			Type:   PtrOrNil("/internal_server_error"),
+			Title:  PtrOrNil(http.StatusText(500)),
+			Status: PtrOrNil(int32(500)),
 		}, cerr
 	}
 
@@ -194,9 +194,9 @@ func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetU
 			cerrors.WithMessage("user not found"),
 		)
 		return openapi.GetUserById404JSONResponse{
-			Type:   stringPointer("/resource_not_found"),
-			Title:  stringPointer(http.StatusText(404)),
-			Status: intPointer(404),
+			Type:   PtrOrNil("/resource_not_found"),
+			Title:  PtrOrNil(http.StatusText(404)),
+			Status: PtrOrNil(int32(404)),
 		}, cerr
 	case err != nil:
 		cerr := cerrors.ErrSystemInternal.New(
@@ -204,9 +204,9 @@ func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetU
 			cerrors.WithMessage("failed to get user"),
 		)
 		return openapi.GetUserById500JSONResponse{
-			Type:   stringPointer("/internal_server_error"),
-			Title:  stringPointer(http.StatusText(500)),
-			Status: intPointer(500),
+			Type:   PtrOrNil("/internal_server_error"),
+			Title:  PtrOrNil(http.StatusText(500)),
+			Status: PtrOrNil(int32(500)),
 		}, cerr
 	default:
 		// 正常
@@ -224,9 +224,38 @@ func (p *StrictServerImpl) GetUserById(ctx context.Context, request openapi.GetU
 // (PATCH /users/{user_id})
 func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.UpdateUserByIdRequestObject) (openapi.UpdateUserByIdResponseObject, error) {
 
-	user, err := p.opsHandler.UpdateUser(ctx, uuid.MustParse(request.UserId), &models.UserPrototype{
-		Name:  request.Body.Name,
-		Email: string(request.Body.Email),
+	user, err := p.opsHandler.GetUser(ctx, uuid.MustParse(request.UserId))
+	switch {
+	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
+		cerr := cerrors.ErrDBNotFound.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("user not found"),
+		)
+		return openapi.UpdateUserById404JSONResponse{
+			Type:   PtrOrNil("/resource_not_found"),
+			Title:  PtrOrNil(http.StatusText(404)),
+			Status: PtrOrNil(int32(404)),
+		}, cerr
+	case err != nil:
+		cerr := cerrors.ErrSystemInternal.New(
+			cerrors.WithCause(err),
+			cerrors.WithMessage("failed to get user"),
+		)
+		return openapi.UpdateUserById500JSONResponse{
+			Type:   PtrOrNil("/internal_server_error"),
+			Title:  PtrOrNil(http.StatusText(500)),
+			Status: PtrOrNil(int32(500)),
+		}, cerr
+	default:
+		// nothinf
+	}
+
+	user.Name = UpdateOrKeep(user.Name, request.Body.Name)
+	user.Email = UpdateOrKeep(user.Email, request.Body.Email)
+
+	user, err = p.opsHandler.UpdateUser(ctx, uuid.MustParse(request.UserId), &models.UserPrototype{
+		Name:  user.Name,
+		Email: user.Email,
 	})
 	switch {
 	case errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows):
@@ -235,9 +264,9 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 			cerrors.WithMessage("user not found"),
 		)
 		return openapi.UpdateUserById404JSONResponse{
-			Type:   stringPointer("/resource_not_found"),
-			Title:  stringPointer(http.StatusText(404)),
-			Status: intPointer(404),
+			Type:   PtrOrNil("/resource_not_found"),
+			Title:  PtrOrNil(http.StatusText(404)),
+			Status: PtrOrNil(int32(404)),
 		}, cerr
 	case err != nil:
 		var cerr error
@@ -250,9 +279,9 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 					cerrors.WithMessage("user already exists"),
 				)
 				return openapi.UpdateUserById400JSONResponse{
-					Type:   stringPointer("/bad_request"),
-					Title:  stringPointer(http.StatusText(400)),
-					Status: intPointer(400),
+					Type:   PtrOrNil("/bad_request"),
+					Title:  PtrOrNil(http.StatusText(400)),
+					Status: PtrOrNil(int32(400)),
 				}, cerr
 			case pgerrcode.ForeignKeyViolation:
 				cerr = cerrors.ErrDBConstraint.New(
@@ -260,9 +289,9 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 					cerrors.WithMessage("foreign key constraint violation"),
 				)
 				return openapi.UpdateUserById400JSONResponse{
-					Type:   stringPointer("/bad_request"),
-					Title:  stringPointer(http.StatusText(400)),
-					Status: intPointer(400),
+					Type:   PtrOrNil("/bad_request"),
+					Title:  PtrOrNil(http.StatusText(400)),
+					Status: PtrOrNil(int32(400)),
 				}, cerr
 			default:
 				cerr = cerrors.ErrSystemInternal.New(
@@ -270,9 +299,9 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 					cerrors.WithMessage("database error"),
 				)
 				return openapi.UpdateUserById500JSONResponse{
-					Type:   stringPointer("/internal_server_error"),
-					Title:  stringPointer(http.StatusText(500)),
-					Status: intPointer(500),
+					Type:   PtrOrNil("/internal_server_error"),
+					Title:  PtrOrNil(http.StatusText(500)),
+					Status: PtrOrNil(int32(500)),
 				}, cerr
 			}
 		}
@@ -282,9 +311,9 @@ func (p *StrictServerImpl) UpdateUserById(ctx context.Context, request openapi.U
 			cerrors.WithMessage("failed to update user"),
 		)
 		return openapi.UpdateUserById500JSONResponse{
-			Type:   stringPointer("/internal_server_error"),
-			Title:  stringPointer(http.StatusText(500)),
-			Status: intPointer(500),
+			Type:   PtrOrNil("/internal_server_error"),
+			Title:  PtrOrNil(http.StatusText(500)),
+			Status: PtrOrNil(int32(500)),
 		}, cerr
 	default:
 		// 正常
@@ -311,9 +340,9 @@ func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.D
 				cerrors.WithMessage("user not found"),
 			)
 			return openapi.DeleteUserById404JSONResponse{
-				Type:   stringPointer("/resource_not_found"),
-				Title:  stringPointer(http.StatusText(404)),
-				Status: intPointer(404),
+				Type:   PtrOrNil("/resource_not_found"),
+				Title:  PtrOrNil(http.StatusText(404)),
+				Status: PtrOrNil(int32(404)),
 			}, cerr
 		default:
 			cerr := cerrors.ErrSystemInternal.New(
@@ -321,9 +350,9 @@ func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.D
 				cerrors.WithMessage("failed to delete user"),
 			)
 			return openapi.DeleteUserById500JSONResponse{
-				Type:   stringPointer("/internal_server_error"),
-				Title:  stringPointer(http.StatusText(500)),
-				Status: intPointer(500),
+				Type:   PtrOrNil("/internal_server_error"),
+				Title:  PtrOrNil(http.StatusText(500)),
+				Status: PtrOrNil(int32(500)),
 			}, cerr
 		}
 	}
@@ -332,9 +361,9 @@ func (p *StrictServerImpl) DeleteUserById(ctx context.Context, request openapi.D
 			cerrors.WithMessage("user not found"),
 		)
 		return openapi.DeleteUserById404JSONResponse{
-			Type:   stringPointer("/resource_not_found"),
-			Title:  stringPointer(http.StatusText(404)),
-			Status: intPointer(404),
+			Type:   PtrOrNil("/resource_not_found"),
+			Title:  PtrOrNil(http.StatusText(404)),
+			Status: PtrOrNil(int32(404)),
 		}, cerr
 	}
 	return openapi.DeleteUserById204Response{}, nil

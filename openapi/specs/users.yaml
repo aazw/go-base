@@ -166,7 +166,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserPrototype'
+              $ref: '#/components/schemas/UserPrototypeOptional'
             example:
               name: 'Johnathan Doe'
               email: 'johnathan.doe@example.com'
@@ -273,8 +273,6 @@ components:
           description: Unique identifier for the user (UUIDv7)
           minLength: 36
           maxLength: 36
-          x-oapi-codegen-extra-tags:
-            binding: 'required,uuid'
           # https://github.com/oapi-codegen/oapi-codegen/issues/760
           x-go-type: uuid.UUID
           x-go-type-import:
@@ -285,15 +283,11 @@ components:
           description: Full name of the user
           minLength: 1
           maxLength: 100
-          x-oapi-codegen-extra-tags:
-            binding: 'required,min=1,max=100'
         email:
           type: string
           description: Email address of the user
           minLength: 5
           maxLength: 254
-          x-oapi-codegen-extra-tags:
-            binding: 'required,email,min=5,max=254'
       required:
         - id
         - name
@@ -301,7 +295,7 @@ components:
 
     UserPrototype:
       type: object
-      description: Prototype schema for user create or update
+      description: Prototype schema for user create
       properties:
         name:
           type: string
@@ -309,17 +303,36 @@ components:
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
-            binding: 'required,min=1,max=100'
+            binding: 'required'
         email:
           type: string
           description: Email address of the user
           minLength: 5
           maxLength: 254
           x-oapi-codegen-extra-tags:
-            binding: 'required,email,min=5,max=254'
+            binding: 'required,email'
       required:
         - name
         - email
+
+    UserPrototypeOptional:
+      type: object
+      description: Prototype schema for user update
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+          minLength: 1
+          maxLength: 100
+          x-oapi-codegen-extra-tags:
+            binding: 'required'
+        email:
+          type: string
+          description: Email address of the user
+          minLength: 5
+          maxLength: 254
+          x-oapi-codegen-extra-tags:
+            binding: 'required,email'
 
     UsersListResponse:
       type: object
@@ -342,20 +355,3 @@ components:
           $ref: '#/components/schemas/User'
       required:
         - user
-
-    # Error:
-    #   type: object
-    #   description: Error response
-    #   properties:
-    #     code:
-    #       type: integer
-    #       format: int32
-    #       minimum: 0
-    #       maximum: 1000
-    #       description: Application-specific error code
-    #     message:
-    #       type: string
-    #       description: Error message
-    #   required:
-    #     - code
-    #     - message

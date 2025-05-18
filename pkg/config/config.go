@@ -24,19 +24,19 @@ type CORS struct {
 
 	Enabled bool `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
 
-	// Enabled==true のとき必須。各要素は
+	// Enabled==true のとき必須. 各要素は
 	// * ワイルドカード "*" か
 	// * scheme 付き URI（http(s)://...）か
 	// * ホスト名（RFC1123）
 	AllowOrigins []string `mapstructure:"allow_origins" json:"allow_origins" yaml:"allow_origins" validate:"required_if=Enabled true,dive,hostname_rfc1123|uri|eq=*"`
 
-	// Enabled==true のとき必須。要素は代表的な HTTP メソッドのみ許可
+	// Enabled==true のとき必須. 要素は代表的な HTTP メソッドのみ許可
 	AllowMethods []string `mapstructure:"allow_methods" json:"allow_methods" yaml:"allow_methods" validate:"required_if=Enabled true,dive,oneof=GET POST PUT PATCH DELETE HEAD OPTIONS"`
 
-	// 任意。ASCII 以外を弾く
+	// 任意. ASCII 以外を弾く
 	AllowHeaders []string `mapstructure:"allow_headers" json:"allow_headers" yaml:"allow_headers" validate:"omitempty,dive,printascii"`
 
-	// 任意。ASCII 以外を弾く
+	// 任意. ASCII 以外を弾く
 	ExposeHeaders []string `mapstructure:"expose_headers" json:"expose_headers" yaml:"expose_headers" validate:"omitempty,dive,printascii"`
 
 	AllowCredentials bool `mapstructure:"allow_credentials" json:"allow_credentials" yaml:"allow_credentials" validate:""`

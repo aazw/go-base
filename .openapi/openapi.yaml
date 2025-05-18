@@ -16,7 +16,7 @@ paths:
       tags:
         - Health
       summary: Readiness チェック
-      description: システムがリクエストを受け付ける準備ができているかを確認します。
+      description: システムがリクエストを受け付ける準備ができているかを確認します
       responses:
         '200':
           description: システムが利用可能
@@ -35,7 +35,7 @@ paths:
       tags:
         - Health
       summary: Liveness チェック
-      description: システムが正常に動作しているかを確認します。
+      description: システムが正常に動作しているかを確認します
       responses:
         '200':
           description: システムが稼働中
@@ -204,7 +204,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserPrototype'
+              $ref: '#/components/schemas/UserPrototypeOptional'
             example:
               name: Johnathan Doe
               email: johnathan.doe@example.com
@@ -371,8 +371,6 @@ components:
           description: Unique identifier for the user (UUIDv7)
           minLength: 36
           maxLength: 36
-          x-oapi-codegen-extra-tags:
-            binding: required,uuid
           x-go-type: uuid.UUID
           x-go-type-import:
             name: uuid
@@ -382,22 +380,18 @@ components:
           description: Full name of the user
           minLength: 1
           maxLength: 100
-          x-oapi-codegen-extra-tags:
-            binding: required,min=1,max=100
         email:
           type: string
           description: Email address of the user
           minLength: 5
           maxLength: 254
-          x-oapi-codegen-extra-tags:
-            binding: required,email,min=5,max=254
       required:
         - id
         - name
         - email
     UserPrototype:
       type: object
-      description: Prototype schema for user create or update
+      description: Prototype schema for user create
       properties:
         name:
           type: string
@@ -405,17 +399,35 @@ components:
           minLength: 1
           maxLength: 100
           x-oapi-codegen-extra-tags:
-            binding: required,min=1,max=100
+            binding: required
         email:
           type: string
           description: Email address of the user
           minLength: 5
           maxLength: 254
           x-oapi-codegen-extra-tags:
-            binding: required,email,min=5,max=254
+            binding: required,email
       required:
         - name
         - email
+    UserPrototypeOptional:
+      type: object
+      description: Prototype schema for user update
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+          minLength: 1
+          maxLength: 100
+          x-oapi-codegen-extra-tags:
+            binding: required
+        email:
+          type: string
+          description: Email address of the user
+          minLength: 5
+          maxLength: 254
+          x-oapi-codegen-extra-tags:
+            binding: required,email
     UsersListResponse:
       type: object
       description: Users list response

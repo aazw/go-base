@@ -116,10 +116,10 @@ func (p *ProblemDetailsRenderer) Middleware() gin.HandlerFunc {
 				}
 
 				c.AbortWithStatusJSON(status, openapi.ProblemDetails{
-					Type:          stringPointer(p.uriReference),
-					Title:         stringPointer(http.StatusText(status)),
-					Status:        intPointer(status),
-					Detail:        stringPointer("validation failed for one or more fields"),
+					Type:          PtrOrNil(p.uriReference),
+					Title:         PtrOrNil(http.StatusText(status)),
+					Status:        PtrOrNil(int32(status)),
+					Detail:        PtrOrNil("validation failed for one or more fields"),
 					InvalidParams: &invalidParams,
 					TraceId:       &traceID,
 				})
