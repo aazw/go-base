@@ -1,5 +1,7 @@
 # go-base for me
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/aazw/go-base)
+
 ## Progress
 
 - [x] VSCode IDE
