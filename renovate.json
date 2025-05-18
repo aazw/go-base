@@ -4,7 +4,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+TYPESCRIPT_NODE_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
@@ -13,7 +13,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+DOCKER_GOLANG_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
@@ -22,7 +22,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+DOCKER_JQ_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
@@ -31,7 +31,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "ARG\\s+DOCKER_GOLANGCI_LINT_VERSION=(?<currentValue>\\S+)"
@@ -42,7 +42,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+DOCKER_SQLC_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
@@ -51,7 +51,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "ARG\\s+DOCKER_GOLANG_MIGRATE_VERSION=(?<currentValue>\\S+)"
@@ -62,7 +62,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+DOCKER_DIVE_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "docker",
@@ -71,70 +71,70 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_DOCKERFMT_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "github.com/reteps/dockerfmt",
+      "depNameTemplate": "github.com/reteps/dockerfmt",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_DELVE_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "github.com/go-delve/delve",
+      "depNameTemplate": "github.com/go-delve/delve",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_OAPI_CODEGEN_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "github.com/oapi-codegen/oapi-codegen/v2",
+      "depNameTemplate": "github.com/oapi-codegen/oapi-codegen/v2",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_OGEN_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "github.com/ogen-go/ogen",
+      "depNameTemplate": "github.com/ogen-go/ogen",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_SHFMT_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "mvdan.cc/sh/v3",
+      "depNameTemplate": "mvdan.cc/sh/v3",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_MKCERT_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "filippo.io/mkcert",
+      "depNameTemplate": "filippo.io/mkcert",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+GO_DEPENDABOT_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "packageNameTemplate": "github.com/dependabot",
+      "depNameTemplate": "github.com/dependabot",
       "versioningTemplate": "semver-coerced"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "ARG\\s+NPM_OPENAPI_GENERATOR_CLI_VERSION=(?<currentValue>\\S+)"
@@ -145,7 +145,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "ARG\\s+NPM_IBM_OPENAPI_VALIDATOR_VERSION=(?<currentValue>\\S+)"
@@ -156,7 +156,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+NPM_REDOCLY_CLI_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "npm",
@@ -165,7 +165,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "ARG\\s+NPM_SQL_FORMATTER_VERSION=(?<currentValue>\\S+)"
@@ -176,7 +176,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+NPM_PRETTIER_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "npm",
@@ -185,7 +185,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^.devcontainer/Dockerfile$"],
+      "managerFilePatterns": ["^\\.devcontainer/Dockerfile$"],
       "matchStringsStrategy": "recursive",
       "matchStrings": ["ARG\\s+PIPX_GITINGEST_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "pypi",
