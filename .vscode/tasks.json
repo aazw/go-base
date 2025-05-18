@@ -156,6 +156,28 @@
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
+      "label": "renovate_dry_run.sh",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/renovate_dry_run.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
+      "label": "renovate_validate_config.sh",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/renovate_validate_config.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
       "label": "sqlc.sh",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/sqlc.sh",

@@ -24,6 +24,7 @@ ARG NPM_IBM_OPENAPI_VALIDATOR_VERSION=1.35.2
 ARG NPM_REDOCLY_CLI_VERSION=1.34.3
 ARG NPM_SQL_FORMATTER_VERSION=15.6.1
 ARG NPM_PRETTIER_VERSION=3.5.3
+ARG NPM_RENOVATE_VERSION=40.14.4
 
 # for pipx tools
 ARG PIPX_GITINGEST_VERSION=0.1.4
@@ -190,3 +191,9 @@ RUN yarn global add prettier@${NPM_PRETTIER_VERSION}
 # https://github.com/dependabot/cli
 ARG GO_DEPENDABOT_VERSION
 RUN go install github.com/dependabot/cli/cmd/dependabot@${GO_DEPENDABOT_VERSION}
+
+# renovate
+# https://github.com/renovatebot/renovate
+# https://www.npmjs.com/package/renovate
+ARG NPM_RENOVATE_VERSION
+RUN yarn global add renovate@${NPM_RENOVATE_VERSION}
