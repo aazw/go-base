@@ -1,5 +1,6 @@
 # go-base for me
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/aazw/go-base.svg)](https://pkg.go.dev/github.com/aazw/go-base)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/aazw/go-base)
 
 ## Progress
@@ -48,6 +49,7 @@
   - [x] uuid v7 for effective indexing in rerational database
   - [x] cors
   - [ ] rate limit
+  - [x] crean architecture based packaging
 - [ ] Unittest
 - [ ] CI
   - [ ] Formatter
