@@ -129,7 +129,7 @@
       "matchStringsStrategy": "any",
       "matchStrings": ["ARG\\s+GO_DEPENDABOT_VERSION=(?<currentValue>\\S+)"],
       "datasourceTemplate": "go",
-      "depNameTemplate": "github.com/dependabot",
+      "depNameTemplate": "github.com/dependabot/cli",
       "versioningTemplate": "semver-coerced"
     },
     {
