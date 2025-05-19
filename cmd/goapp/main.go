@@ -77,12 +77,15 @@ const (
 	defaultConfigFileBasename = "config"
 )
 
+const (
+	logLevelFlagKey  string = "log_level"
+	logFormatFlagKey string = "log_format"
+	configFlagKey    string = "config"
+)
+
 var (
-	logLevel  string // --log_format
-	logFormat string // --log_level
-	cfgFile   string // --config
-	cfg       config.Config
-	rootCmd   = &cobra.Command{
+	cfg     config.Config
+	rootCmd = &cobra.Command{
 		Use:   appName,
 		Short: appUsage,
 		Long:  "",
@@ -110,15 +113,25 @@ func init() {
 	// viper and cobra
 	f := rootCmd.PersistentFlags()
 
-	// CLI専用フラグ
-	f.StringVar(&logLevel, "log_level", "info", "log level = (info|debug)")
-	f.StringVar(&logFormat, "log_format", "text", "log format = (text|json)")
-	f.StringVarP(&cfgFile, "config", "c", "", "Config file path")
+	// CLIフラグ
+	f.String(logLevelFlagKey, "info", "log level = (info|debug)")
+	f.String(logFormatFlagKey, "text", "log format = (text|json)")
+	f.StringP(configFlagKey, "c", "", "Config file path")
 
 	// 環境変数も取り込む
 	viper.SetEnvPrefix(envVarPrefix)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// 明示的な BindEnv
+	viper.BindEnv(configFlagKey, envVarPrefix+"_CONFIG")        // GOAPP_CONFIG → config
+	viper.BindEnv(logLevelFlagKey, envVarPrefix+"_LOG_LEVEL")   // GOAPP_LOG_LEVEL → log_level
+	viper.BindEnv(logFormatFlagKey, envVarPrefix+"_LOG_FORMAT") // GOAPP_LOG_FORMAT → log_format
+
+	// フラグと viper のバインド
+	viper.BindPFlag(logLevelFlagKey, f.Lookup(logLevelFlagKey))
+	viper.BindPFlag(logFormatFlagKey, f.Lookup(logFormatFlagKey))
+	viper.BindPFlag(configFlagKey, f.Lookup(configFlagKey))
 }
 
 func main() {
@@ -130,6 +143,7 @@ func main() {
 
 func initConfig() error {
 	// log level
+	logLevel := viper.GetString(logLevelFlagKey)
 	switch strings.ToLower(logLevel) {
 	case "info":
 		handlerOptions.Level = slog.LevelInfo
@@ -142,6 +156,7 @@ func initConfig() error {
 	}
 
 	// log format
+	logFormat := viper.GetString(logFormatFlagKey)
 	var handler slog.Handler
 	switch strings.ToLower(logFormat) {
 	case "text":
@@ -157,7 +172,7 @@ func initConfig() error {
 
 	// config
 	cfg = config.NewConfig()
-
+	cfgFile := viper.GetString(configFlagKey)
 	if cfgFile != "" {
 		_, err := os.Stat(cfgFile)
 		if err != nil {
@@ -741,6 +756,7 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 		}
 
 		// log/slogで出力する
+		logFormat := viper.GetString(logFormatFlagKey)
 		var buf bytes.Buffer
 		var handler slog.Handler
 		switch strings.ToLower(logFormat) {
@@ -771,6 +787,11 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 
 	// Default recovery
 	router.Use(gin.Recovery())
+
+	// rate limiter
+	if cfg.Server.RateLimit.Enabled {
+		router.Use(api.RateLimiter(1, 5))
+	}
 
 	// Tracing middleware
 	if cfg.OTLPTrace.Enabled || cfg.OTLPMetric.Enabled || cfg.OTLPLog.Enabled {
@@ -810,142 +831,4 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 	}
 
 	return router, nil
-}
-
-type sessionWriter struct {
-	gin.ResponseWriter
-	ctx       context.Context
-	req       *http.Request
-	sm        *scs.SessionManager
-	committed bool
-}
-
-func (sw *sessionWriter) commitAndSetCookie() error {
-	token, expiry, err := sw.sm.Commit(sw.ctx)
-	if err != nil {
-		return err
-	}
-	http.SetCookie(sw.ResponseWriter, &http.Cookie{
-		Name:     sw.sm.Cookie.Name,
-		Value:    token,
-		Path:     sw.sm.Cookie.Path,
-		Domain:   sw.sm.Cookie.Domain,
-		Secure:   sw.sm.Cookie.Secure,
-		HttpOnly: sw.sm.Cookie.HttpOnly,
-		SameSite: sw.sm.Cookie.SameSite,
-		Expires:  expiry,
-	})
-	return nil
-}
-
-func (sw *sessionWriter) ensureCommit() {
-	if sw.committed {
-		return
-	}
-	if err := sw.commitAndSetCookie(); err != nil {
-		// ヘッダ未確定なら 500 を返す
-		sw.sm.ErrorFunc(sw.ResponseWriter, sw.req, err)
-	}
-	sw.committed = true
-}
-
-func (sw *sessionWriter) WriteHeader(code int) {
-	sw.ensureCommit()
-	sw.ResponseWriter.WriteHeader(code)
-}
-
-func (sw *sessionWriter) Write(data []byte) (int, error) {
-	sw.ensureCommit()
-	return sw.ResponseWriter.Write(data)
-}
-
-func (sw *sessionWriter) WriteString(s string) (int, error) {
-	sw.ensureCommit()
-	return sw.ResponseWriter.WriteString(s)
-}
-
-func SessionLoadAndSave(sm *scs.SessionManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		// セッション対象外の処理
-		switch c.Request.URL.Path {
-		case "/metrics":
-			c.Next()
-			return
-		default:
-		}
-
-		w := c.Writer
-		r := c.Request
-		w.Header().Add("Vary", "Cookie")
-
-		// セッションを読込
-		var token string
-		if cookie, err := r.Cookie(sm.Cookie.Name); err == nil {
-			token = cookie.Value
-		}
-		ctx, err := sm.Load(r.Context(), token)
-		if err != nil {
-			sm.ErrorFunc(w, r, err)
-			c.Abort()
-			return
-		}
-		c.Request = r.WithContext(ctx)
-
-		// ResponseWriter を sessionWriter に差し替え
-		cw := &sessionWriter{
-			ResponseWriter: w,
-			ctx:            ctx,
-			req:            r,
-			sm:             sm,
-		}
-		c.Writer = cw
-
-		// ハンドラチェーン続行
-		c.Next()
-
-		// ここまで来ても何も書かれていない場合の処理 (204 等)
-		if !cw.committed && !cw.Written() {
-			cw.ensureCommit()
-		}
-	}
-}
-
-// https://pkg.go.dev/github.com/grafana/pyroscope-go#Logger
-// https://github.com/grafana/pyroscope-go/blob/v1.2.2/logger.go#L21
-// type Logger interface {
-//     Infof(_ string, _ ...interface{})
-//     Debugf(_ string, _ ...interface{})
-//     Errorf(_ string, _ ...interface{})
-// }
-
-type PyroscopeCustomLogger struct{}
-
-func (p *PyroscopeCustomLogger) Infof(format string, args ...any) {
-
-	// https://github.com/grafana/pyroscope-go/blob/v1.2.2/session.go#L80-L85
-	switch {
-	case format == "starting profiling session:":
-		return
-	case strings.HasPrefix(format, "  AppName:        "):
-		format = "starting profiling session: AppName: %+v"
-	case strings.HasPrefix(format, "  Tags:           "):
-		format = "starting profiling session: Tags: %+v"
-	case strings.HasPrefix(format, "  ProfilingTypes: "):
-		format = "starting profiling session: ProfilingTypes: %+v"
-	case strings.HasPrefix(format, "  DisableGCRuns:  "):
-		format = "starting profiling session: DisableGCRuns: %+v"
-	case strings.HasPrefix(format, "  UploadRate:     "):
-		format = "starting profiling session: UploadRate: %+v"
-	}
-
-	logger.Info("pyroscope", "log", fmt.Sprintf(format, args...))
-}
-
-func (p *PyroscopeCustomLogger) Debugf(format string, args ...any) {
-	logger.Debug("pyroscope", "log", fmt.Sprintf(format, args...))
-}
-
-func (p *PyroscopeCustomLogger) Errorf(format string, args ...any) {
-	logger.Error("pyroscope", "log", fmt.Sprintf(format, args...))
 }

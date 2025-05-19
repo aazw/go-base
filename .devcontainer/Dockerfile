@@ -8,6 +8,7 @@ ARG DOCKER_GOLANGCI_LINT_VERSION=v2.1.6
 ARG DOCKER_SQLC_VERSION=1.29.0
 ARG DOCKER_GOLANG_MIGRATE_VERSION=v4.18.3
 ARG DOCKER_DIVE_VERSION=v0.13.1
+ARG DOCKER_K6_VERSION=1.0.0
 
 # for go install
 ARG GO_DOCKERFMT_VERSION=v0.3.7
@@ -60,6 +61,11 @@ FROM migrate/migrate:${DOCKER_GOLANG_MIGRATE_VERSION} AS golang-migrate-builder
 # https://github.com/wagoodman/dive
 # https://hub.docker.com/r/wagoodman/dive
 FROM wagoodman/dive:${DOCKER_DIVE_VERSION} AS dive-builder
+
+# k6
+# https://github.com/grafana/k6
+# https://hub.docker.com/r/grafana/k6
+FROM grafana/k6:${DOCKER_K6_VERSION} AS k6-builder
 
 # ##############################
 # main image
@@ -197,3 +203,7 @@ RUN go install github.com/dependabot/cli/cmd/dependabot@${GO_DEPENDABOT_VERSION}
 # https://www.npmjs.com/package/renovate
 ARG NPM_RENOVATE_VERSION
 RUN yarn global add renovate@${NPM_RENOVATE_VERSION}
+
+# k6
+# refs above
+COPY --from=k6-builder /usr/bin/k6 /usr/local/bin/

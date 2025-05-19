@@ -17,6 +17,14 @@ type Server struct {
 	Port uint   `mapstructure:"port" json:"port" yaml:"port" validate:"required,gt=0,lte=65535"`
 	CORS CORS   `mapstructure:"cors" json:"cors" yaml:"cors"`
 	OIDC OIDC   `mapstructure:"oidc" json:"oidc" yaml:"oidc"`
+
+	RateLimit RateLimit `mapstructure:"rate_limit" json:"rate_limit" yaml:"rate_limit"`
+}
+
+type RateLimit struct {
+	Enabled bool    `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+	RPS     float64 `mapstructure:"rps"     json:"rps"     yaml:"rps"     validate:"required_if=Enabled true,omitempty,gt=0"`
+	Burst   int     `mapstructure:"burst"   json:"burst"   yaml:"burst"   validate:"required_if=Enabled true,omitempty,gt=0"`
 }
 
 type CORS struct {
@@ -157,6 +165,11 @@ func NewConfig() Config {
 			},
 			OIDC: OIDC{
 				Enabled: false,
+			},
+			RateLimit: RateLimit{
+				Enabled: false,
+				RPS:     10000, // 適当
+				Burst:   200,   // 適当 (RPSの2%)
 			},
 		},
 		Postgres: Postgres{
