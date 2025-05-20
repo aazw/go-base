@@ -842,6 +842,25 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 		router.GET(cfg.Prometheus.MetricsPath, gin.WrapH(promhttp.Handler()))
 	}
 
+	// add Custom Headers
+	if len(cfg.Server.CustomHeaders) > 0 {
+		router.Use(func(c *gin.Context) {
+			for _, customHeader := range cfg.Server.CustomHeaders {
+				if customHeader.Enabled && customHeader.Name != "" && customHeader.Value != "" {
+					responseHeader := c.Writer.Header()
+					if _, ok := responseHeader[customHeader.Name]; ok {
+						if customHeader.Override {
+							c.Header(customHeader.Name, customHeader.Value)
+						}
+					} else {
+						c.Header(customHeader.Name, customHeader.Value)
+					}
+				}
+			}
+			c.Next()
+		})
+	}
+
 	// Session Load
 	// designed by https://github.com/alexedwards/scs/blob/v2.8.0/session.go#L132
 	router.Use(SessionLoadAndSave(sessionManager))

@@ -58,7 +58,7 @@
   - [x] request timeout
   - [x] version embedeed
   - [x] リクエストボディサイズ制限
-  - [ ] セキュリティヘッダー挿入
+  - [x] セキュリティヘッダー挿入
  - [ ] Unittest
 - [ ] CI
   - [x] Formatter (prettier, gofmt, shfmt, etc...)
