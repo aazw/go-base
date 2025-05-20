@@ -19,6 +19,7 @@ ARG GO_SHFMT_VERSION=v3.11.0
 ARG GO_MKCERT_VERSION=v1.4.4
 ARG GO_DEPENDABOT_VERSION=v1.64.0
 ARG GO_GO_LICENSES=v1.6.0
+ARG GO_GO_TASK_VERSION=v3.43.3
 
 # for npm tools
 ARG NPM_OPENAPI_GENERATOR_CLI_VERSION=2.20.2
@@ -213,3 +214,9 @@ COPY --from=k6-builder /usr/bin/k6 /usr/local/bin/
 # https://github.com/google/go-licenses
 ARG GO_GO_LICENSES
 RUN go install github.com/google/go-licenses@${GO_GO_LICENSES}
+
+# go-task
+# https://github.com/go-task/task
+# https://taskfile.dev/
+ARG GO_GO_TASK_VERSION
+RUN go install github.com/go-task/task/v3/cmd/task@${GO_GO_TASK_VERSION}

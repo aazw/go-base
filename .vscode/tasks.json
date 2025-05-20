@@ -4,187 +4,238 @@
     {
       "label": "devcontainer_build.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/devcontainer_build.sh",
+      "command": "task devcontainer_build",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_build.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_build.sh",
+      "command": "task docker_build",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_compose_down.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_compose_down.sh",
+      "command": "task docker_compose_down",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_compose_run_k6.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_compose_run_k6.sh",
+      "command": "task docker_compose_run_k6",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_compose_run_migrate_down.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_compose_run_migrate_down.sh",
+      "command": "task docker_compose_run_migrate_down",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_compose_run_migrate_up.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_compose_run_migrate_up.sh",
+      "command": "task docker_compose_run_migrate_up",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "docker_compose_up.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/docker_compose_up.sh",
+      "command": "task docker_compose_up",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "gitingest.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/gitingest.sh",
+      "command": "task gitingest",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "golangci-lint.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/golangci-lint.sh",
+      "command": "task golangci-lint",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "go_mod_tidy.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/go_mod_tidy.sh",
+      "command": "task go_mod_tidy",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "oapi-codegen.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/oapi-codegen.sh",
+      "command": "task oapi-codegen",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "prettier.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/prettier.sh",
+      "command": "task prettier",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "redocly_join.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/redocly_join.sh",
+      "command": "task redocly_join",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "remove_ds_store.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/remove_ds_store.sh",
+      "command": "task remove_ds_store",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "renovate_dry_run.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/renovate_dry_run.sh",
+      "command": "task renovate_dry_run",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "renovate_validate_config.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/renovate_validate_config.sh",
+      "command": "task renovate_validate_config",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
       "label": "sqlc.sh",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/sqlc.sh",
+      "command": "task sqlc",
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     }
