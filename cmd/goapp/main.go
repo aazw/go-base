@@ -15,6 +15,7 @@ import (
 	"path"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -70,6 +71,11 @@ import (
 	"github.com/aazw/go-base/pkg/operations"
 )
 
+var (
+	GoVersion  = "unknown"
+	MainModule = "unknown"
+)
+
 const (
 	appName                   = "goapp"
 	appUsage                  = ""
@@ -107,6 +113,12 @@ var logger *slog.Logger
 var tracer = otel.Tracer(appName)
 
 func init() {
+	// ビルド情報取得
+	if info, ok := debug.ReadBuildInfo(); ok {
+		GoVersion = info.GoVersion  // 例: go1.21.0
+		MainModule = info.GoVersion // 例: github.com/aazw/go-base (devel)
+	}
+
 	// gin
 	gin.SetMode(gin.ReleaseMode)
 
@@ -383,8 +395,13 @@ func runE(cmd *cobra.Command, args []string) (err error) {
 	// Run with Graceful Shutdown
 	hostport := net.JoinHostPort(cfg.Server.Host, strconv.Itoa(int(cfg.Server.Port)))
 	srv := &http.Server{
-		Addr:    hostport,
-		Handler: router,
+		Addr:              hostport,
+		Handler:           router,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:       time.Duration(cfg.Server.ReadTimeoutSeconds) * time.Second,       // リクエストヘッダ＋ボディ読み込み完了までの最大時間
+		WriteTimeout:      time.Duration(cfg.Server.WriteTimeoutSeconds) * time.Second,      // レスポンス書き込みまでの最大時間
+		IdleTimeout:       time.Duration(cfg.Server.IdleTimeoutSeconds) * time.Second,       // Keep-Alive 接続の最大アイドル時間
+		ReadHeaderTimeout: time.Duration(cfg.Server.ReadHeaderTimeoutSeconds) * time.Second, // ヘッダ読み込みのタイムアウト
 	}
 
 	errCh := make(chan error, 1)
@@ -791,6 +808,18 @@ func setupRouter(sessionManager *scs.SessionManager) (*gin.Engine, error) {
 	// rate limiter
 	if cfg.Server.RateLimit.Enabled {
 		router.Use(api.RateLimiter(1, 5))
+	}
+
+	// max request tize
+	if cfg.Server.MaxRequestSize <= 0 {
+		sizeLimiter, err := api.NewRequestSizeLimiter("https://example.com/", logger)
+		if err != nil {
+			return nil, cerrors.ErrSystemInternal.New(
+				cerrors.WithCause(err),
+				cerrors.WithMessage("failed to init request size limiter"),
+			)
+		}
+		router.Use(sizeLimiter.Middleware(cfg.Server.MaxRequestSize))
 	}
 
 	// Tracing middleware

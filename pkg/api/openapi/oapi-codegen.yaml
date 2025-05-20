@@ -5,4 +5,4 @@ generate:
   models: true
   gin-server: true
   strict-server: true
-  embedded-spec: true
+  # embedded-spec: true

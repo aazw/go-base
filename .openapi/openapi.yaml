@@ -126,6 +126,18 @@ paths:
                   - name: name
                     reason: must not be empty
                 trace_id: 123e4567-e89b-12d3-a456-426614174000
+        '413':
+          description: Content too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://example.com/problems/request-too-large
+                title: Your request body is too large.
+                status: 413
+                detail: Content Too Large
+                error_code: CONTENT_TOO_LARGE
         '500':
           description: Internal server error
           content:
@@ -251,6 +263,18 @@ paths:
                 detail: No user with the given ID was found.
                 error_code: USER_NOT_FOUND
                 trace_id: 123e4567-e89b-12d3-a456-426614174000
+        '413':
+          description: Content too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://example.com/problems/request-too-large
+                title: Your request body is too large.
+                status: 413
+                detail: Content Too Large
+                error_code: CONTENT_TOO_LARGE
         '500':
           description: Internal server error
           content:

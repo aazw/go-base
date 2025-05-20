@@ -1,8 +1,10 @@
 # go-base for me
 
+![Go version](https://img.shields.io/github/go-mod/go-version/aazw/go-base.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aazw/go-base.svg)](https://pkg.go.dev/github.com/aazw/go-base)
 [![Go Report Card](https://goreportcard.com/badge/github.com/aazw/go-base)](https://goreportcard.com/report/github.com/aazw/go-base)
 
+![License](https://img.shields.io/github/license/aazw/go-base.svg)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/aazw/go-base)
 
 ## Progress
@@ -11,8 +13,8 @@
   - [x] Dev Container by Compose
   - [x] Formatter
   - [x] Linter
-  - [x] Tasks
-  - [x] Debugger
+  - [x] Tasks (tasks.json)
+  - [x] Debugger (launch.json)
 - [x] Dockerfile
 - [x] Docker Compose
   - [x] GoApp
@@ -29,7 +31,7 @@
   - [x] Grafana Loki with Promtail
   - [x] K6
   - [x] openapi viewer (redocly/cli)
-- [ ] GoApp Base
+- [x] GoApp Base
   - [x] cli by cobra
   - [x] configuration by viper
   - [x] sqlc
@@ -50,9 +52,15 @@
   - [x] custom error
   - [x] uuid v7 for effective indexing in rerational database
   - [x] cors
-  - [ ] rate limit
+  - [x] rate limit
   - [x] crean architecture based packaging
-- [ ] Unittest
+  - [x] graceful shutdown
+  - [x] request timeout
+  - [x] version embedeed
+  - [x] リクエストボディサイズ制限
+  - [ ] セキュリティヘッダー挿入
+ - [ ] Unittest
 - [ ] CI
-  - [ ] Formatter
+  - [x] Formatter (prettier, gofmt, shfmt, etc...)
   - [ ] Linter
+  - [x] Dependencies (renovate.json)

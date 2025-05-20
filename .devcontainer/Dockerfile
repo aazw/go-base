@@ -18,6 +18,7 @@ ARG GO_OGEN_VERSION=v1.12.0
 ARG GO_SHFMT_VERSION=v3.11.0
 ARG GO_MKCERT_VERSION=v1.4.4
 ARG GO_DEPENDABOT_VERSION=v1.64.0
+ARG GO_GO_LICENSES=v1.6.0
 
 # for npm tools
 ARG NPM_OPENAPI_GENERATOR_CLI_VERSION=2.20.2
@@ -207,3 +208,8 @@ RUN yarn global add renovate@${NPM_RENOVATE_VERSION}
 # k6
 # refs above
 COPY --from=k6-builder /usr/bin/k6 /usr/local/bin/
+
+# go-licenses
+# https://github.com/google/go-licenses
+ARG GO_GO_LICENSES
+RUN go install github.com/google/go-licenses@${GO_GO_LICENSES}

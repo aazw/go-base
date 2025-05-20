@@ -19,6 +19,21 @@ type Server struct {
 	OIDC OIDC   `mapstructure:"oidc" json:"oidc" yaml:"oidc"`
 
 	RateLimit RateLimit `mapstructure:"rate_limit" json:"rate_limit" yaml:"rate_limit"`
+
+	// リクエストヘッダ＋ボディ読み込み完了までの最大時間
+	ReadTimeoutSeconds uint `mapstructure:"read_timeout_seconds" json:"read_timeout_seconds" yaml:"read_timeout_seconds"`
+
+	// レスポンス書き込みまでの最大時間
+	WriteTimeoutSeconds uint `mapstructure:"write_timeout_seconds" json:"write_timeout_seconds" yaml:"write_timeout_seconds"`
+
+	// Keep-Alive 接続の最大アイドル時間
+	IdleTimeoutSeconds uint `mapstructure:"idle_timeout_seconds" json:"idle_timeout_seconds" yaml:"idle_timeout_seconds"`
+
+	// ヘッダ読み込みのタイムアウト
+	ReadHeaderTimeoutSeconds uint `mapstructure:"read_header_timeout_seconds" json:"read_header_timeout_seconds" yaml:"read_header_timeout_seconds"`
+
+	// リクエストボディサイズ制限
+	MaxRequestSize int64 `mapstructure:"max_request_size" json:"max_request_size" yaml:"max_request_size"`
 }
 
 type RateLimit struct {
@@ -171,6 +186,11 @@ func NewConfig() Config {
 				RPS:     10000, // 適当
 				Burst:   200,   // 適当 (RPSの2%)
 			},
+			ReadTimeoutSeconds:       10,
+			WriteTimeoutSeconds:      10,
+			IdleTimeoutSeconds:       120,
+			ReadHeaderTimeoutSeconds: 2,
+			MaxRequestSize:           1024 * 1024 * 10, // 10MB
 		},
 		Postgres: Postgres{
 			Host:                     "postgres", //
