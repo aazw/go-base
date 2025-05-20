@@ -58,9 +58,11 @@
   - [x] request timeout
   - [x] version embedeed
   - [x] リクエストボディサイズ制限
-  - [ ] セキュリティヘッダー挿入
+  - [x] セキュリティヘッダー挿入
+    - [x] セキュリティに限らずカスタムヘッダ付与対応
  - [ ] Unittest
 - [ ] CI
   - [x] Formatter (prettier, gofmt, shfmt, etc...)
   - [ ] Linter
   - [x] Dependencies (renovate.json)
+

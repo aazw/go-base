@@ -34,12 +34,22 @@ type Server struct {
 
 	// リクエストボディサイズ制限
 	MaxRequestSize int64 `mapstructure:"max_request_size" json:"max_request_size" yaml:"max_request_size"`
+
+	// カスタムヘッダ挿入 (セキュリティ関連のヘッダなど)
+	CustomHeaders []CustomHeader `mapstructure:"custom_headers" json:"custom_headers" yaml:"custom_headers" validate:"omitempty,dive"`
+}
+
+type CustomHeader struct {
+	Enabled  bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+	Name     string `mapstructure:"name"    json:"name"    yaml:"name"    validate:"required_if=Enabled true"`
+	Value    string `mapstructure:"value"   json:"value"   yaml:"value"   validate:"required_if=Enabled true"`
+	Override bool   `mapstructure:"override" json:"override" yaml:"override"`
 }
 
 type RateLimit struct {
-	Enabled bool    `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
-	RPS     float64 `mapstructure:"rps"     json:"rps"     yaml:"rps"     validate:"required_if=Enabled true,omitempty,gt=0"`
-	Burst   int     `mapstructure:"burst"   json:"burst"   yaml:"burst"   validate:"required_if=Enabled true,omitempty,gt=0"`
+	Enabled bool    `mapstructure:"enabled"  json:"enabled"  yaml:"enabled"`
+	RPS     float64 `mapstructure:"rps"      json:"rps"      yaml:"rps"     validate:"required_if=Enabled true,omitempty,gt=0"`
+	Burst   int     `mapstructure:"burst"    json:"burst"    yaml:"burst"   validate:"required_if=Enabled true,omitempty,gt=0"`
 }
 
 type CORS struct {
@@ -191,6 +201,44 @@ func NewConfig() Config {
 			IdleTimeoutSeconds:       120,
 			ReadHeaderTimeoutSeconds: 2,
 			MaxRequestSize:           1024 * 1024 * 10, // 10MB
+			CustomHeaders: []CustomHeader{
+				// https://gin-gonic.com/ja/docs/examples/security-headers/
+				{
+					Enabled: false,
+					Name:    "X-Frame-Options",
+					Value:   "DENY",
+				},
+				{
+					Enabled: false,
+					Name:    "Content-Security-Policy",
+					Value:   "default-src 'self'; connect-src *; font-src *; script-src-elem * 'unsafe-inline'; img-src * data:; style-src * 'unsafe-inline';",
+				},
+				{
+					Enabled: false,
+					Name:    "X-XSS-Protection",
+					Value:   "1; mode=block",
+				},
+				{
+					Enabled: false,
+					Name:    "Strict-Transport-Security",
+					Value:   "max-age=31536000; includeSubDomains; preload",
+				},
+				{
+					Enabled: false,
+					Name:    "Referrer-Policy",
+					Value:   "strict-origin",
+				},
+				{
+					Enabled: false,
+					Name:    "X-Content-Type-Options",
+					Value:   "nosniff",
+				},
+				{
+					Enabled: false,
+					Name:    "Permissions-Policy",
+					Value:   "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()",
+				},
+			},
 		},
 		Postgres: Postgres{
 			Host:                     "postgres", //
