@@ -1,0 +1,24 @@
+name: 'CI: Build on PR'
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.x'
+
+      - name: Ensure all packages to build
+        run: go list ./...
+
+      - name: Build all packages
+        run: go build ./...
