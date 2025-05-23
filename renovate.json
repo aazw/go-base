@@ -1,6 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "labels": ["Renovate"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 10,
+  "assignees": ["aazw"],
   "customManagers": [
     {
       "customType": "regex",
