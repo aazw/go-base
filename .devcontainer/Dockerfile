@@ -1,8 +1,8 @@
 # for main image
-ARG TYPESCRIPT_NODE_VERSION=22-bookworm
+ARG DOCKER_MAIN_VERSION=1.24-bookworm
 
 # for builder images
-ARG DOCKER_GOLANG_VERSION=1.24
+ARG DOCKER_NODE_VERSION=22.16.0-bookworm
 ARG DOCKER_JQ_VERSION=1.7.1
 ARG DOCKER_GOLANGCI_LINT_VERSION=v2.1.6
 ARG DOCKER_SQLC_VERSION=1.29.0
@@ -36,9 +36,10 @@ ARG PIPX_GITINGEST_VERSION=0.1.4
 # builder images
 # ##############################
 
-# golang
-# https://hub.docker.com/_/golang
-FROM golang:${DOCKER_GOLANG_VERSION} AS golang-builder
+# node
+# https://hub.docker.com/_/node
+# https://note.milldea.com/posts/two-ways-to-install-nodejs-with-fixed-version-in-dockerfile
+FROM node:${DOCKER_NODE_VERSION} AS node-builder
 
 # jq
 # https://github.com/jqlang/jq
@@ -74,12 +75,10 @@ FROM grafana/k6:${DOCKER_K6_VERSION} AS k6-builder
 # ##############################
 
 # golang
+# https://hub.docker.com/_/golang
+# https://github.com/devcontainers/images/tree/main/src/go
 # https://mcr.microsoft.com/v2/vscode/devcontainers/go/tags/list
-# FROM mcr.microsoft.com/devcontainers/go:${GOLANG_VERSION}
-
-# typescript-node
-# https://mcr.microsoft.com/v2/vscode/devcontainers/typescript-node/tags/list
-FROM mcr.microsoft.com/devcontainers/typescript-node:${TYPESCRIPT_NODE_VERSION}
+FROM mcr.microsoft.com/devcontainers/go:${DOCKER_MAIN_VERSION}
 
 RUN apt-get -y update
 RUN apt-get -y install --no-install-recommends \
@@ -94,10 +93,16 @@ RUN apt-get -y install --no-install-recommends \
     git \
     procps
 
-# golang
+# node
 # refs above
-COPY --from=golang-builder /usr/local/go /usr/local/
-ENV PATH=$PATH:/usr/local/go/bin/:/root/go/bin/
+COPY --from=node-builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npx
+
+# yarn
+RUN npm install -g yarn
 
 # docker
 # https://matsuand.github.io/docs.docker.jp.onthefly/engine/install/debian/
