@@ -128,6 +128,20 @@
       "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
     },
     {
+      "label": "go_build_without_binary.sh",
+      "type": "shell",
+      "command": "task go_build_without_binary",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [] // 空配列を指定すると「このタスクの出力をスキャンしない」が固定化される
+    },
+    {
       "label": "go_mod_tidy.sh",
       "type": "shell",
       "command": "task go_mod_tidy",
