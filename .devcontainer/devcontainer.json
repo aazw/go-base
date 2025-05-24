@@ -42,7 +42,8 @@
   "remoteUser": "root",
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
-    "GOAPP_CONFIG": "config/goapp/config.yaml"
+    "GOAPP_CONFIG": "config/goapp/config.yaml",
+    "TZ": "Asia/Tokyo"
   },
   "shutdownAction": "stopCompose"
 }
