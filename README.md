@@ -1,4 +1,6 @@
-# go-base for me
+# My Go boilerplate project
+
+This is a personal boilerplate codebase for my Go projects.
 
 ![Go version](https://img.shields.io/github/go-mod/go-version/aazw/go-base.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aazw/go-base.svg)](https://pkg.go.dev/github.com/aazw/go-base)
