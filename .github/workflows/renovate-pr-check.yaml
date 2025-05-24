@@ -1,0 +1,50 @@
+# .github/workflows/renovate-pr-check.yml
+name: 'Check if Renovate PR builds successfully'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, master]
+
+permissions:
+  contents: write # push に必要
+
+jobs:
+  renovate-check:
+    if: github.actor == 'renovate[bot]' || github.actor == 'renovate-bot'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Format all packages
+        run: go fmt ./...
+
+      - name: Check if Renovate PR builds successfully
+        run: go build ./...
+
+      - name: List all packages
+        run: go list ./...
+
+      - name: Commit and push changes if needed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore: auto tidy after Renovate"
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "No changes to commit."
+          fi
