@@ -1,5 +1,5 @@
 # for main image
-ARG DOCKER_MAIN_VERSION=1.24-bookworm
+ARG DOCKER_MAIN_VERSION=1.24.3-bookworm
 
 # for builder images
 ARG DOCKER_NODE_VERSION=22.16.0-bookworm
@@ -75,23 +75,27 @@ FROM grafana/k6:${DOCKER_K6_VERSION} AS k6-builder
 # ##############################
 
 # golang
+
+# debian version
+# 10 (Buster)
+# 11 (Bullseye)
+# 12 (Bookworm)
+# 13 (Trixie)
+# 14 (Forky)
+
+# golang
 # https://hub.docker.com/_/golang
 # https://github.com/devcontainers/images/tree/main/src/go
+# https://github.com/devcontainers/images/blob/main/src/go/.devcontainer/Dockerfile
 # https://mcr.microsoft.com/v2/vscode/devcontainers/go/tags/list
-FROM mcr.microsoft.com/devcontainers/go:${DOCKER_MAIN_VERSION}
+FROM golang:${DOCKER_MAIN_VERSION}
 
 RUN apt-get -y update
-RUN apt-get -y install --no-install-recommends \
-    apt-transport-https \
-    build-essential \
+RUN apt-get -y install \
     ca-certificates \
-    gnupg \
-    gnupg-agent \
-    lsb-release \
-    software-properties-common \
     curl \
     git \
-    procps
+    nano
 
 # node
 # refs above
@@ -104,15 +108,24 @@ RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
 # yarn
 RUN npm install -g yarn
 
-# docker
-# https://matsuand.github.io/docs.docker.jp.onthefly/engine/install/debian/
-RUN for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do sudo apt-get remove $pkg; done
-RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-RUN echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
-    $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list >/dev/null
-RUN apt-get -y update
-RUN apt-get -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+# pipx
+# https://github.com/pypa/pipx
+RUN apt-get -y install pipx
+RUN pipx ensurepath
+
+# add vscode user
+# https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL >/etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+USER $USERNAME
 
 # dockerfmt
 # https://github.com/reteps/dockerfmt
@@ -184,11 +197,6 @@ RUN yarn global add sql-formatter@${NPM_SQL_FORMATTER_VERSION}
 # https://github.com/FiloSottile/mkcert
 ARG GO_MKCERT_VERSION
 RUN go install filippo.io/mkcert@${GO_MKCERT_VERSION}
-
-# pipx
-# https://github.com/pypa/pipx
-RUN apt-get -y install pipx
-RUN pipx ensurepath
 
 # gitingest
 # https://github.com/cyclotruc/gitingest
