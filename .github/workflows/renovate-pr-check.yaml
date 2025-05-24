@@ -43,7 +43,7 @@ jobs:
           if [[ -n "$(git status --porcelain)" ]]; then
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -am "chore: auto tidy after Renovate"
+            git commit -am "chore: auto-normalize go.mod and format after Renovate PR"
             git push origin HEAD:${{ github.head_ref }}
           else
             echo "No changes to commit."
