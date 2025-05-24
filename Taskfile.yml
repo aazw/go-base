@@ -50,6 +50,11 @@ tasks:
       - ./scripts/golangci-lint.sh
     silent: true
 
+  go_build_without_binary:
+    cmds:
+      - ./scripts/go_build_without_binary.sh
+    silent: true
+
   go_mod_tidy:
     cmds:
       - ./scripts/go_mod_tidy.sh
