@@ -256,7 +256,7 @@ services:
   # https://opentelemetry.io/docs/languages/go/getting-started/
   # https://opentelemetry.io/docs/languages/go/instrumentation/
   opentelemetry-collector:
-    image: otel/opentelemetry-collector-contrib:0.126.0
+    image: otel/opentelemetry-collector-contrib:0.127.0
     restart: always
     ports:
       - '51888:1888' # pprof extension
