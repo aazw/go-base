@@ -156,5 +156,23 @@
       "depNameTemplate": "gitingest",
       "versioningTemplate": "semver-coerced"
     }
+  ],
+  "packageRules": [
+    {
+      "matchPaths": [".devcontainer/**"],
+      "groupName": "devcontainer"
+    },
+    {
+      "matchPaths": ["go.mod", "go.sum"],
+      "groupName": "gomod"
+    },
+    {
+      "matchPaths": ["Dockerfile", "compose.yaml"],
+      "groupName": "docker"
+    },
+    {
+      "matchPaths": [".github/workflows/*.yaml"],
+      "groupName": "githubactions"
+    }
   ]
 }
