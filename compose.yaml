@@ -99,7 +99,7 @@ services:
   # https://hub.docker.com/r/redis/redisinsight
   # https://github.com/RedisInsight/RedisInsight
   redisinsight:
-    image: redis/redisinsight:2.68
+    image: redis/redisinsight:2.70
     restart: always
     ports:
       - 5540:5540
@@ -156,7 +156,7 @@ services:
   # https://hub.docker.com/r/prom/prometheus
   # https://github.com/prometheus/prometheus
   prometheus:
-    image: prom/prometheus:v3.4.0
+    image: prom/prometheus:v3.4.1
     restart: always
     ports:
       - '9090:9090'
@@ -256,7 +256,7 @@ services:
   # https://opentelemetry.io/docs/languages/go/getting-started/
   # https://opentelemetry.io/docs/languages/go/instrumentation/
   opentelemetry-collector:
-    image: otel/opentelemetry-collector-contrib:0.126.0
+    image: otel/opentelemetry-collector-contrib:0.127.0
     restart: always
     ports:
       - '51888:1888' # pprof extension
