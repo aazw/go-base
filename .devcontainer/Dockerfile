@@ -29,7 +29,6 @@ ARG GO_STATICCHECK_VERSION=v0.6.1
 ARG GO_GO_LICENSES=v1.6.0
 ARG GO_OAPI_CODEGEN_VERSION=v2.4.1
 ARG GO_OGEN_VERSION=v1.13.0
-ARG GO_DEPENDABOT_VERSION=v1.66.0
 
 # for npm tools
 ARG NPM_PRETTIER_VERSION=3.5.3
@@ -102,11 +101,6 @@ RUN go install -v github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@${GO_
 # https://github.com/ogen-go/ogen
 ARG GO_OGEN_VERSION
 RUN go install -v github.com/ogen-go/ogen/cmd/ogen@${GO_OGEN_VERSION}
-
-# dependabot
-# https://github.com/dependabot/cli
-ARG GO_DEPENDABOT_VERSION
-RUN go install github.com/dependabot/cli/cmd/dependabot@${GO_DEPENDABOT_VERSION}
 
 # node
 # https://hub.docker.com/_/node
