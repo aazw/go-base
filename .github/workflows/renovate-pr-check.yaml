@@ -1,50 +1,116 @@
 # .github/workflows/renovate-pr-check.yml
-name: 'Check if Renovate PR builds successfully'
+name: 'Check Renovate Pull Request'
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main, master]
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'renovate.json'
 
 permissions:
   contents: write # push に必要
 
 jobs:
-  renovate-check:
+  detect-changes:
     if: github.actor == 'renovate[bot]' || github.actor == 'renovate-bot'
     runs-on: ubuntu-latest
+    outputs:
+      go_files: ${{ steps.filter.outputs.go_files }}
+      renovate_json_file: ${{ steps.filter.outputs.renovate_json_file }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            go_files:
+              - 'go.mod'
+              - 'go.sum'
+            renovate_json_file:
+              - 'renovate.json'
 
+  go-build-check:
+    needs:
+      - detect-changes
+    if: needs.detect-changes.outputs.go_files == 'true'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
+          fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-
       - name: Run go mod tidy
-        run: go mod tidy
-
+        run: scripts/go_mod_tidy_all.sh
       - name: Format all packages
-        run: go fmt ./...
-
+        run: scripts/go_fmt_all.sh
       - name: Check if Renovate PR builds successfully
-        run: go build -o /dev/null -buildvcs=false ./...
-
+        run: scripts/go_build_all.sh
       - name: List all packages
-        run: go list ./...
-
+        run: scripts/go_list_all.sh
       - name: Commit and push changes if needed
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -am "chore: auto-normalize go.mod and format after Renovate PR"
-            git push origin HEAD:${{ github.head_ref }}
+            
+            # 1. 変更をコミット
+            git commit -am "chore: normalize Go modules after Renovate PR"
+
+            # 2. 最新リモートを取得してリベース（競合時に備えautostash）
+            git pull --rebase --autostash origin "$GITHUB_HEAD_REF"
+
+            # 3. リベース結果を force-with-lease で安全に push
+            git push --force-with-lease origin HEAD:"$GITHUB_HEAD_REF"
+          else
+            echo "No changes to commit."
+          fi
+
+  format-renovate-json:
+    needs:
+      - detect-changes
+      - go-build-check
+    if: always() && needs.detect-changes.outputs.renovate_json_file == 'true' # alwaysでgo-build-checkが該当せず前ジョブが走らなかった場合でも動かせるようになる
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Format renovate.json
+        run: npx --yes prettier -w renovate.json
+      - name: Commit and push changes if needed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            
+            # 1. 変更をコミット
+            git commit -am "chore: format renovate.json"
+
+            # 2. 最新リモートを取得してリベース（競合時に備えautostash）
+            git pull --rebase --autostash origin "$GITHUB_HEAD_REF"
+
+            # 3. リベース結果を force-with-lease で安全に push
+            git push --force-with-lease origin HEAD:"$GITHUB_HEAD_REF"
           else
             echo "No changes to commit."
           fi
