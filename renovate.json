@@ -159,19 +159,19 @@
   ],
   "packageRules": [
     {
-      "matchPaths": [".devcontainer/**"],
+      "matchFileNames": [".devcontainer/**"],
       "groupName": "devcontainer"
     },
     {
-      "matchPaths": ["go.mod", "go.sum"],
+      "matchFileNames": ["go.mod", "go.sum"],
       "groupName": "gomod"
     },
     {
-      "matchPaths": ["Dockerfile", "compose.yaml"],
+      "matchFileNames": ["Dockerfile", "compose.yaml"],
       "groupName": "docker"
     },
     {
-      "matchPaths": [".github/workflows/*.yaml"],
+      "matchFileNames": [".github/workflows/*.yaml"],
       "groupName": "githubactions"
     }
   ]
