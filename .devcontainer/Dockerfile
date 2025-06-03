@@ -152,6 +152,7 @@ FROM grafana/k6:${DOCKER_K6_VERSION} AS k6-builder
 # https://github.com/devcontainers/images/blob/main/src/go/.devcontainer/Dockerfile
 # https://mcr.microsoft.com/v2/vscode/devcontainers/go/tags/list
 FROM golang:${DOCKER_GO_VERSION}
+ENV DEBIAN_FRONTEND=noninteractive
 
 # add distribution packages
 RUN apt-get -y update
@@ -201,10 +202,6 @@ COPY --from=golang-builder /go/bin/oapi-codegen /usr/local/bin/
 # ogen
 # refs above
 COPY --from=golang-builder /go/bin/ogen /usr/local/bin/
-
-# dependabot
-# refs above
-COPY --from=golang-builder /go/bin/dependabot /usr/local/bin/
 
 # node
 # refs above
