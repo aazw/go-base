@@ -29,7 +29,7 @@
       {
         // Dcokerfileのフォーマット
         "match": "\\bDockerfile$",
-        "cmd": "dockerfmt -w \"${file}\""
+        "cmd": "dockerfmt -n -w \"${file}\""
       },
       {
         // シェルスクリプトのフォーマット
