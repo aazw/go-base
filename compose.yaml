@@ -170,7 +170,7 @@ services:
   # https://hub.docker.com/r/grafana/alloy
   # https://github.com/grafana/alloy
   alloy:
-    image: grafana/alloy:v1.9.0
+    image: grafana/alloy:v1.9.1
     restart: always
     ports:
       - '12345:12345'
