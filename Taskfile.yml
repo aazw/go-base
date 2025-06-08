@@ -5,92 +5,116 @@ version: '3'
 vars: {}
 
 tasks:
+  list:
+    dir: '{{ .TASKFILE_DIR }}'
+    cmds:
+      - task --list-all
+    silent: true
+
   devcontainer_build:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/devcontainer_build.sh
     silent: true
 
   docker_build:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_build.sh
     silent: true
 
   docker_compose_down:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_compose_down.sh
     silent: true
 
   docker_compose_run_k6:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_compose_run_k6.sh
     silent: true
 
   docker_compose_run_migrate_down:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_compose_run_migrate_down.sh
     silent: true
 
   docker_compose_run_migrate_up:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_compose_run_migrate_up.sh
     silent: true
 
   docker_compose_up:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/docker_compose_up.sh
     silent: true
 
   gitingest:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/gitingest.sh
     silent: true
 
   golangci-lint:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/golangci-lint.sh
     silent: true
 
   go_build_without_binary:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/go_build_without_binary.sh
     silent: true
 
   go_mod_tidy:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/go_mod_tidy.sh
     silent: true
 
   oapi-codegen:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/oapi-codegen.sh
     silent: true
 
   prettier:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/prettier.sh
     silent: true
 
   redocly_join:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/redocly_join.sh
     silent: true
 
   remove_ds_store:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/remove_ds_store.sh
     silent: true
 
   renovate_dry_run:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/renovate_dry_run.sh
     silent: true
 
   renovate_validate_config:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/renovate_validate_config.sh
     silent: true
 
   sqlc:
+    dir: '{{ .TASKFILE_DIR }}'
     cmds:
       - ./scripts/sqlc.sh
     silent: true

@@ -1,31 +1,22 @@
 {
-  "files.associations": {
-    ".prettierrc": "jsonc"
-  },
-  "prettier.requireConfig": true,
   "editor.wordWrap": "off",
   "diffEditor.wordWrap": "off",
   "[markdown]": {
     "editor.wordWrap": "off"
   },
-  "[json][jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
-  "[yaml]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
-  "[go]": {
-    "editor.defaultFormatter": "golang.go",
-    "editor.formatOnSave": true
-  },
-  "[dockercompose]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
+  "editor.formatOnSave": false,
   "emeraldwalk.runonsave": {
     "commands": [
+      {
+        // .prettierrcのフォーマット
+        "match": "\\.prettierrc$",
+        "cmd": "prettier -w \"${file}\""
+      },
+      {
+        // .prettierignoreのフォーマット
+        "match": "\\.prettierignore$",
+        "cmd": "prettier -w \"${file}\""
+      },
       {
         // Dcokerfileのフォーマット
         "match": "\\bDockerfile$",
@@ -37,10 +28,24 @@
         "cmd": "shfmt -w \"${file}\""
       },
       {
+        // YAMLのフォーマット
+        "match": "\\.ya?ml$",
+        "cmd": "prettier -w \"${file}\""
+      },
+      {
+        // JSONのフォーマット
+        "match": "\\.json$",
+        "cmd": "prettier -w \"${file}\""
+      },
+      {
         // openapi/specs/ に定義されている各ドメインのSpecが更新されたら統合版を更新する
         "match": "openapi/specs/.*\\.(?:yaml|yml)$",
         "cmd": "bash -lc 'redocly join openapi/base.yaml openapi/specs/*.yaml -o .openapi/openapi.yaml'"
       }
     ]
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true
   }
 }
