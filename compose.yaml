@@ -191,7 +191,7 @@ services:
   # https://hub.docker.com/r/grafana/tempo
   # https://github.com/grafana/tempo
   tempo:
-    image: grafana/tempo:2.7.2
+    image: grafana/tempo:2.8.0
     restart: always
     ports:
       - '3200:3200' # tempo http
@@ -256,7 +256,7 @@ services:
   # https://opentelemetry.io/docs/languages/go/getting-started/
   # https://opentelemetry.io/docs/languages/go/instrumentation/
   opentelemetry-collector:
-    image: otel/opentelemetry-collector-contrib:0.127.0
+    image: otel/opentelemetry-collector-contrib:0.128.0
     restart: always
     ports:
       - '51888:1888' # pprof extension
