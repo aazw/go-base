@@ -153,6 +153,7 @@ FROM grafana/k6:${DOCKER_K6_VERSION} AS k6-builder
 # https://mcr.microsoft.com/v2/vscode/devcontainers/go/tags/list
 FROM golang:${DOCKER_GO_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBCONF_NOWARNINGS=yes
 
 # add distribution packages
 RUN apt-get -y update
