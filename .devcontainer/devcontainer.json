@@ -33,8 +33,7 @@
         "emeraldwalk.RunOnSave",
         "ms-azuretools.vscode-containers",
         "ms-azuretools.vscode-docker",
-        "golang.go",
-        "saoudrizwan.claude-dev"
+        "golang.go"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
