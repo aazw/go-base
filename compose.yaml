@@ -156,7 +156,7 @@ services:
   # https://hub.docker.com/r/prom/prometheus
   # https://github.com/prometheus/prometheus
   prometheus:
-    image: prom/prometheus:v3.4.1
+    image: prom/prometheus:v3.4.2
     restart: always
     ports:
       - '9090:9090'
@@ -281,7 +281,7 @@ services:
   # https://hub.docker.com/r/redocly/cli
   # https://github.com/Redocly/redocly-cli
   redocly-preview:
-    image: redocly/cli:1.34.3
+    image: redocly/cli:1.34.4
     restart: always
     ports:
       - '18080:8080'
